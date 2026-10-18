@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Da kann man Angeln</title>
+<style>
+:root{--bg:#07090d;--pan:#0d1117;--card:#121923;--ink:#e8edf5;--mut:#7d8aa0;--line:#1c2634;--acc:#3b9cff;--acc2:#0f2236;--warn:#ff9b5e}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);height:100vh;display:grid;grid-template-columns:1fr 420px}
+#map{height:100%;background:var(--bg)}
+aside{background:var(--pan);border-left:1px solid var(--line);overflow:auto;padding:22px;display:flex;flex-direction:column}
+#panel{flex:1}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--card);padding:4px;border-radius:10px;margin:14px 0}
+.tabs button{background:transparent;color:var(--mut);padding:7px}.tabs button.on{background:var(--acc);color:#04101d}
+.foot{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);text-align:center;font-size:.78rem;letter-spacing:.04em;color:var(--mut)}
+.foot b{color:var(--acc);font-weight:700}
+h1{font-size:1.55rem;margin:0 0 4px;letter-spacing:-.02em}h2{font-size:1.3rem;margin:0 0 4px;letter-spacing:-.01em}h3{font-size:.95rem;margin:22px 0 8px}
+p{margin:4px 0}.mut{color:var(--mut);font-size:.88rem}code{background:var(--card);padding:1px 5px;border-radius:4px}
+.sp{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin:8px 0}
+.badge{display:inline-block;font-size:.74rem;font-weight:600;padding:2px 9px;border-radius:99px;background:var(--acc2);color:var(--acc);margin-left:6px}
+.badge.nat{background:transparent;border:1px solid var(--line);color:var(--mut)}
+.badge.w{background:transparent;border:1px solid var(--warn);color:var(--warn)}
+form{display:grid;gap:8px;margin-top:8px}
+select,input,button{font:inherit;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+input::placeholder{color:var(--mut)}
+button{background:var(--acc);color:#04101d;border:0;cursor:pointer;font-weight:650}
+button:hover{filter:brightness(1.1)}
+button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)}
+button.g{background:#fff;color:#1f1f1f;display:flex;align-items:center;justify-content:center;gap:10px}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.list button{display:block;width:100%;text-align:left;margin:6px 0;background:var(--card);color:var(--ink);font-weight:500;border:1px solid var(--line)}
+.list button:hover{border-color:var(--acc);filter:none}
+.note{background:var(--acc2);color:#b9d8f7;padding:11px 13px;border-radius:10px;font-size:.88rem;margin:12px 0}
+.err{color:var(--warn);font-size:.88rem}
+.bar{display:grid;gap:8px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.bar.row{display:flex;justify-content:space-between;align-items:center}.bar.row button{padding:6px 12px}
+.or{text-align:center;color:var(--mut);font-size:.8rem}
+.chk{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:.88rem}
+.chk label{display:flex;gap:6px;align-items:center}.chk input{padding:0;width:auto}
+@media (max-width:800px){body{grid-template-columns:1fr;grid-template-rows:45vh 1fr;height:auto}aside{border-left:0;border-top:1px solid var(--line)}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+<div id="map" role="application" aria-label="Karte der Gewässer"></div>
+<aside>
+  <div id="panel" aria-live="polite"></div>
+  <footer class="foot">powered by <b>MCL</b></footer>
+</aside>
+
+<script>
+/* ============ KONFIGURATION ============ */
+const GMAPS_KEY = "";
+const SUPABASE_URL = "";
+const SUPABASE_ANON_KEY = "";
+
+const sb = (SUPABASE_URL && SUPABASE_ANON_KEY) ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+let user = null, LAKES = [], currentLake = null, picking = false, picked = null, tmpMarker = null;
+const markers = {};
+let mode = "lake", fishSel = null; // mode: "lake" (nach Gewässer) oder "fish" (nach Fischart)
+
+const SPECIES = {hecht:"Hecht",barsch:"Flussbarsch",zander:"Zander",karpfen:"Karpfen",schleie:"Schleie",aal:"Aal",wels:"Wels",
+ rotauge:"Rotauge",brachse:"Brachse",rotfeder:"Rotfeder",renke:"Renke (Felchen)",seeforelle:"Seeforelle",saibling:"Seesaibling",
+ bachforelle:"Bachforelle",regenbogen:"Regenbogenforelle",aesche:"Äsche",huchen:"Huchen",barbe:"Barbe",doebel:"Döbel",
+ rapfen:"Rapfen",graskarpfen:"Graskarpfen",quappe:"Quappe",kaulbarsch:"Kaulbarsch"};
+const TYPES = {see:"See",fluss:"Fluss",teich:"Teich",talsperre:"Talsperre",kanal:"Kanal"};
+const speciesOpts = Object.entries(SPECIES).sort((a,b)=>a[1].localeCompare(b[1]));
+
+/* ============ AGGREGATION ============ */
+function aggregate(lake, catches, reports){
+  const out = {}, ids = new Set(lake.base);
+  catches.forEach(c=>ids.add(c.species));
+  reports.filter(r=>r.type==="besatz").forEach(r=>ids.add(r.species));
+  ids.forEach(sp=>{
+    const cs = catches.filter(c=>c.species===sp), lures = {};
+    cs.forEach(c=>{if(c.lure){const k=c.lure.trim().toLowerCase();lures[k]=(lures[k]||0)+1}});
+    const top = Object.entries(lures).sort((a,b)=>b[1]-a[1])[0], n = cs.length;
+    out[sp] = {count:n, native:lake.base.includes(sp),
+      last:n? cs.map(c=>c.created_at).sort().pop() : null,
+      topLure: top?{name:top[0],share:Math.round(top[1]/n*100)}:null,
+      stocked:reports.some(r=>r.type==="besatz"&&r.species===sp),
+      gone:reports.filter(r=>r.type==="weg"&&r.species===sp).length};
+  });
+  return out;
+}
+function status(a){
+  if(a.count>0) return a.native?"Aktiv / Bestätigt":"Community-bestätigt";
+  if(a.native) return "Vorkommen heimisch";
+  if(a.stocked) return "Besatz gemeldet";
+  return "Unbestätigt";
+}
+const freq = n=>n>=10?"sehr häufig":n>=4?"häufig":"selten";
+const esc = s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = iso=>new Date(iso).toLocaleDateString("de-DE");
+const panel = document.getElementById("panel");
+
+/* ============ AUTH ============ */
+const G_ICON = '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>';
+function authBar(){
+  if(!sb) return `<div class="note">Supabase ist nicht verbunden. Trage <code>SUPABASE_URL</code> und <code>SUPABASE_ANON_KEY</code> im Code ein.</div>`;
+  if(user) return `<div class="bar row"><span class="mut">${esc(user.email||"Angemeldet")}</span><button class="ghost" id="logout">Abmelden</button></div>`;
+  return `<div class="bar"><button class="g" id="google">${G_ICON}Mit Google anmelden</button><div class="or">oder mit E-Mail</div>
+    <form id="authForm" style="margin:0">
+    <input name="email" type="email" placeholder="E-Mail" required autocomplete="email">
+    <input name="password" type="password" placeholder="Passwort (mind. 6 Zeichen)" minlength="6" required autocomplete="current-password">
+    <div style="display:flex;gap:8px"><button style="flex:1" data-act="login">Anmelden</button><button class="ghost" style="flex:1" data-act="signup">Registrieren</button></div>
+    <p class="err" id="authErr"></p></form></div>`;
+}
+function bindAuth(){
+  const lo = document.getElementById("logout"); if(lo) lo.onclick = ()=>sb.auth.signOut();
+  const g = document.getElementById("google");
+  if(g) g.onclick = async()=>{
+    const {error} = await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin+location.pathname}});
+    if(error) alert(error.message);
+  };
+  const f = document.getElementById("authForm");
+  if(f) f.onsubmit = async e=>{
+    e.preventDefault();
+    const act = e.submitter?e.submitter.dataset.act:"login", email=f.email.value, password=f.password.value;
+    const {error,data} = act==="signup" ? await sb.auth.signUp({email,password}) : await sb.auth.signInWithPassword({email,password});
+    const el = document.getElementById("authErr");
+    if(error) el.textContent = error.message;
+    else if(act==="signup" && !data.session) el.textContent = "Fast fertig: Bestätige deine E-Mail-Adresse über den Link im Postfach.";
+  };
+}
+
+/* ============ DATEN ============ */
+async function loadLakes(){
+  const {data,error} = await sb.from("waterbodies").select("id,name,type,lat,lng,base").order("name").limit(5000);
+  if(error){alert("Gewässer konnten nicht geladen werden: "+error.message);return}
+  LAKES = data; syncMarkers();
+}
+
+/* ============ ANZEIGE ============ */
+function render(){ picking=false; currentLake ? select(currentLake) : home(); }
+
+function home(filter=""){
+  currentLake = null; picking = false; resetMarkers();
+  if(mode==="fish"){fishHome();return}
+  panel.innerHTML = `${authBar()}<h1>Da kann man Angeln</h1>${tabs()}
+   <p class="mut">${LAKES.length} Gewässer. Wähle eines auf der Karte oder suche hier.</p>
+   ${GMAPS_KEY?"":`<div class="note">Noch kein Google-Maps-Key eingetragen (<code>GMAPS_KEY</code>).</div>`}
+   <form onsubmit="return false"><input id="q" type="search" placeholder="Gewässer suchen" value="${esc(filter)}" autocomplete="off"></form>
+   <div class="list" id="lakes"></div>
+   ${user?`<button class="ghost" id="addLake" style="width:100%;margin-top:12px">Neues Gewässer hinzufügen</button>`:`<p class="mut" style="margin-top:12px">Melde dich an, um neue Gewässer hinzuzufügen.</p>`}`;
+  const draw = ()=>{
+    const q = document.getElementById("q").value.toLowerCase();
+    document.getElementById("lakes").innerHTML = LAKES.filter(l=>l.name.toLowerCase().includes(q)).slice(0,60)
+      .map(l=>`<button data-id="${esc(l.id)}">${esc(l.name)} <span class="mut">${TYPES[l.type]||""}</span></button>`).join("") || `<p class="mut">Nichts gefunden.</p>`;
+    document.querySelectorAll("#lakes [data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id));
+  };
+  document.getElementById("q").oninput = draw; draw();
+  const a = document.getElementById("addLake"); if(a) a.onclick = showAdd;
+  bindAuth(); bindTabs();
+}
+
+async function select(id){
+  currentLake = id; picking = false;
+  const lake = LAKES.find(l=>l.id===id); if(!lake){home();return}
+  if(window.map){map.panTo({lat:lake.lat,lng:lake.lng});map.setZoom(11)}
+  const [c,r] = await Promise.all([
+    sb.from("catches").select("species,lure,created_at").eq("lake",id).limit(5000),
+    sb.from("reports").select("species,type").eq("lake",id).limit(5000)]);
+  if(currentLake!==id) return;
+  const loadErr = (c.error||r.error||{}).message, catches=c.data||[], reports=r.data||[];
+  const agg = aggregate(lake,catches,reports);
+  const rows = Object.entries(agg).sort((a,b)=>b[1].count-a[1].count||SPECIES[a[0]].localeCompare(SPECIES[b[0]]));
+  const opts = speciesOpts.map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join("");
+  panel.innerHTML = `${authBar()}<button class="ghost" id="back">Zurück zur Übersicht</button>
+   <h2 style="margin-top:14px">${esc(lake.name)}</h2>
+   <p class="mut">${TYPES[lake.type]||""}, ${catches.length} gemeldete Fänge, ${rows.length} Fischarten</p>
+   ${loadErr?`<p class="err">Daten konnten nicht geladen werden: ${esc(loadErr)}</p>`:""}
+   <h3>Fischarten</h3>
+   ${rows.map(([sp,a])=>`<div class="sp"><b>${esc(SPECIES[sp]||sp)}</b><span class="badge">${status(a)}</span>
+     ${a.stocked&&a.count>0?'<span class="badge nat">Besatz</span>':""}${a.gone?`<span class="badge w">${a.gone}× als verschwunden gemeldet</span>`:""}
+     ${a.count>0?`<p class="mut">${freq(a.count)} (${a.count} Fänge), letzter Fang ${fmt(a.last)}${a.topLure?`, Top-Köder: ${esc(a.topLure.name)} (${a.topLure.share} %)`:""}</p>`
+     :`<p class="mut">Noch keine Fänge in der App registriert</p>`}</div>`).join("")}
+   ${user?`<h3>Fang eintragen</h3>
+   <form id="catchForm"><select name="species" aria-label="Fischart">${opts}</select>
+     <input name="lure" placeholder="Köder, z. B. Gummifisch" maxlength="60">
+     <input name="len" type="number" min="1" max="300" placeholder="Länge in cm (optional)">
+     <button>Fang speichern</button><p class="err" id="catchErr"></p></form>
+   <h3>Meldung zum Bestand</h3>
+   <form id="repForm"><select name="species" aria-label="Fischart">${opts}</select>
+     <select name="type" aria-label="Art der Meldung"><option value="besatz">Hier wurde Besatz eingebracht</option><option value="weg">Art kommt hier nicht mehr vor</option></select>
+     <button class="ghost">Meldung senden</button><p class="err" id="repErr"></p></form>`
+   :`<div class="note">Melde dich an, um Fänge einzutragen oder Meldungen abzugeben.</div>`}`;
+  document.getElementById("back").onclick = ()=>{if(window.map){map.setCenter({lat:51.2,lng:10.4});map.setZoom(6)}home()};
+  bindAuth();
+  const cf = document.getElementById("catchForm");
+  if(cf) cf.onsubmit = async e=>{
+    e.preventDefault();
+    const {error} = await sb.from("catches").insert({lake:id,species:cf.species.value,lure:cf.lure.value||null,length_cm:cf.len.value?+cf.len.value:null});
+    if(error) document.getElementById("catchErr").textContent = error.message; else select(id);
+  };
+  const rf = document.getElementById("repForm");
+  if(rf) rf.onsubmit = async e=>{
+    e.preventDefault();
+    const {error} = await sb.from("reports").insert({lake:id,species:rf.species.value,type:rf.type.value});
+    if(error) document.getElementById("repErr").textContent = error.message; else select(id);
+  };
+}
+
+/* ============ SUCHE NACH FISCHART ============ */
+const tabs = ()=>`<div class="tabs"><button class="${mode==="lake"?"on":""}" data-m="lake">Nach Gewässer</button><button class="${mode==="fish"?"on":""}" data-m="fish">Nach Fischart</button></div>`;
+function bindTabs(){ document.querySelectorAll(".tabs [data-m]").forEach(b=>b.onclick=()=>{mode=b.dataset.m;home()}); }
+function topLure(cs){
+  const m={}; cs.forEach(c=>{if(c.lure){const k=c.lure.trim().toLowerCase();m[k]=(m[k]||0)+1}});
+  const t=Object.entries(m).sort((a,b)=>b[1]-a[1])[0]; return t?t[0]:null;
+}
+function resetMarkers(){
+  if(!window.map) return;
+  Object.values(markers).forEach(m=>{m.setIcon(dot("#3b9cff"));m.setZIndex(1)});
+}
+function highlightMarkers(ids){
+  if(!window.map) return;
+  Object.entries(markers).forEach(([id,m])=>{
+    const on=ids.has(id); m.setIcon(on?{...dot("#3b9cff"),scale:10}:{...dot("#2a3446"),scale:5}); m.setZIndex(on?10:0);
+  });
+}
+function fishHome(){
+  panel.innerHTML = `${authBar()}<h1>Da kann man Angeln</h1>${tabs()}
+   <p class="mut">Worauf hast du heute Lust? Wähle eine Fischart und sieh, wo sie vorkommt.</p>
+   <form onsubmit="return false"><select id="fishSel" aria-label="Fischart"><option value="">Fischart wählen</option>
+     ${speciesOpts.map(([k,v])=>`<option value="${k}"${k===fishSel?" selected":""}>${esc(v)}</option>`).join("")}</select></form>
+   <div id="fishRes"></div>`;
+  bindAuth(); bindTabs();
+  const s=document.getElementById("fishSel");
+  s.onchange=()=>{fishSel=s.value||null;showFish()};
+  showFish();
+}
+async function showFish(){
+  const box=document.getElementById("fishRes"); if(!box) return;
+  if(!fishSel){resetMarkers();return}
+  const sp=fishSel; box.innerHTML='<p class="mut" style="margin-top:12px">Lade…</p>';
+  const [c,r]=await Promise.all([
+    sb.from("catches").select("lake,lure,created_at").eq("species",sp).limit(5000),
+    sb.from("reports").select("lake,type").eq("species",sp).limit(5000)]);
+  if(fishSel!==sp||document.getElementById("fishRes")!==box) return;
+  const by={}, rep={};
+  (c.data||[]).forEach(x=>(by[x.lake]=by[x.lake]||[]).push(x));
+  (r.data||[]).forEach(x=>(rep[x.lake]=rep[x.lake]||{})[x.type]=1);
+  const rows=LAKES.map(l=>{
+    const cs=by[l.id]||[], rp=rep[l.id]||{};
+    return {l,n:cs.length,native:l.base.includes(sp),stocked:!!rp.besatz,gone:!!rp.weg,
+      last:cs.length?cs.map(x=>x.created_at).sort().pop():null,lure:topLure(cs)};
+  }).filter(x=>x.n>0||x.native||x.stocked)
+    .sort((a,b)=>b.n-a.n||(b.native-a.native)||a.l.name.localeCompare(b.l.name));
+  const total=(c.data||[]).length, lure=topLure(c.data||[]);
+  highlightMarkers(new Set(rows.map(x=>x.l.id)));
+  if(window.map&&rows.length){const b=new google.maps.LatLngBounds();rows.forEach(x=>b.extend({lat:x.l.lat,lng:x.l.lng}));map.fitBounds(b,60)}
+  box.innerHTML = `<h3>${esc(SPECIES[sp])}: ${rows.length} Gewässer</h3>
+   <p class="mut">${total} gemeldete Fänge in der Community${lure?`, beliebtester Köder: ${esc(lure)}`:""}</p>
+   <div class="list">${rows.map(x=>`<button data-id="${esc(x.l.id)}"><b>${esc(x.l.name)}</b> <span class="mut">${TYPES[x.l.type]||""}</span><br>
+     <span class="mut">${x.n>0?`${freq(x.n)}, ${x.n} Fänge, letzter Fang ${fmt(x.last)}${x.lure?`, Top-Köder: ${esc(x.lure)}`:""}`
+       :x.native?"Heimisch, noch kein Fang gemeldet":"Besatz gemeldet, noch kein Fang"}${x.gone?" (auch als verschwunden gemeldet)":""}</span></button>`).join("")
+     || '<p class="mut">Für diese Fischart ist noch kein Gewässer hinterlegt.</p>'}</div>`;
+  box.querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id));
+}
+
+/* ============ NEUES GEWÄSSER ============ */
+function showAdd(){
+  currentLake = null; picking = true; picked = null;
+  panel.innerHTML = `${authBar()}<button class="ghost" id="cancel">Abbrechen</button>
+   <h2 style="margin-top:14px">Neues Gewässer</h2>
+   <p class="mut">Klicke auf die Karte, um die Position zu setzen, oder nutze deinen Standort.</p>
+   <form id="addForm">
+     <input name="name" placeholder="Name, z. B. Kirchsee" required minlength="2" maxlength="80">
+     <select name="type" aria-label="Typ">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select>
+     <p class="mut" id="pos">Position: noch nicht gesetzt</p>
+     <button type="button" class="ghost" id="geo">Meinen Standort verwenden</button>
+     <h3 style="margin:8px 0 0">Heimische Fischarten (optional)</h3>
+     <div class="chk">${speciesOpts.map(([k,v])=>`<label><input type="checkbox" name="sp" value="${k}">${esc(v)}</label>`).join("")}</div>
+     <button>Gewässer speichern</button><p class="err" id="addErr"></p></form>`;
+  bindAuth();
+  document.getElementById("cancel").onclick = ()=>{clearTmp();home()};
+  document.getElementById("geo").onclick = ()=>navigator.geolocation&&navigator.geolocation.getCurrentPosition(
+    p=>setPicked(p.coords.latitude,p.coords.longitude,true), ()=>document.getElementById("addErr").textContent="Standort nicht verfügbar.");
+  document.getElementById("addForm").onsubmit = async e=>{
+    e.preventDefault(); const f=e.target, err=document.getElementById("addErr");
+    if(!picked){err.textContent="Bitte zuerst eine Position wählen.";return}
+    const {data,error} = await sb.from("waterbodies").insert({name:f.name.value.trim(),type:f.type.value,lat:picked.lat,lng:picked.lng,
+      base:[...f.querySelectorAll('input[name=sp]:checked')].map(i=>i.value)}).select("id").single();
+    if(error){err.textContent=error.message.includes("check")?"Position liegt außerhalb von Deutschland.":error.message;return}
+    clearTmp(); await loadLakes(); select(data.id);
+  };
+}
+function setPicked(lat,lng,pan){
+  picked = {lat:+lat.toFixed(5),lng:+lng.toFixed(5)};
+  const el = document.getElementById("pos"); if(el) el.textContent = `Position: ${picked.lat}, ${picked.lng}`;
+  if(window.map){
+    clearTmp();
+    tmpMarker = new google.maps.Marker({position:picked,map,icon:dot("#ffffff")});
+    if(pan){map.panTo(picked);map.setZoom(13)}
+  }
+}
+function clearTmp(){if(tmpMarker){tmpMarker.setMap(null);tmpMarker=null}picking=false}
+
+/* ============ GOOGLE MAPS ============ */
+const DARK = [{elementType:"geometry",stylers:[{color:"#0b0f16"}]},{elementType:"labels.text.fill",stylers:[{color:"#7d8aa0"}]},
+ {elementType:"labels.text.stroke",stylers:[{color:"#0b0f16"}]},{featureType:"water",elementType:"geometry",stylers:[{color:"#0d3b72"}]},
+ {featureType:"road",elementType:"geometry",stylers:[{color:"#161d29"}]},{featureType:"poi",stylers:[{visibility:"off"}]},
+ {featureType:"transit",stylers:[{visibility:"off"}]},{featureType:"administrative",elementType:"geometry.stroke",stylers:[{color:"#1f2937"}]}];
+const dot = c=>({path:google.maps.SymbolPath.CIRCLE,scale:8,fillColor:c,fillOpacity:1,strokeColor:"#04101d",strokeWeight:2});
+function syncMarkers(){
+  if(!window.map) return;
+  LAKES.forEach(l=>{ if(markers[l.id]) return;
+    const m = new google.maps.Marker({position:{lat:l.lat,lng:l.lng},map,title:l.name,icon:dot("#3b9cff")});
+    m.addListener("click",()=>{ if(!picking) select(l.id) }); markers[l.id]=m; });
+}
+window.initMap = function(){
+  window.map = new google.maps.Map(document.getElementById("map"),{center:{lat:51.2,lng:10.4},zoom:6,styles:DARK,
+    backgroundColor:"#07090d",mapTypeControl:false,streetViewControl:false,fullscreenControl:false});
+  map.addListener("click",e=>{ if(picking) setPicked(e.latLng.lat(),e.latLng.lng(),false) });
+  syncMarkers();
+};
+if(GMAPS_KEY){
+  const s=document.createElement("script");
+  s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GMAPS_KEY)}&callback=initMap&loading=async`;
+  s.async=true; document.head.appendChild(s);
+} else document.getElementById("map").innerHTML='<p class="mut" style="padding:24px">Karte erscheint, sobald ein Google-Maps-Key eingetragen ist.</p>';
+
+/* ============ START ============ */
+if(sb){
+  sb.auth.onAuthStateChange((_e,session)=>{user=session?session.user:null; if(!picking) render()});
+  sb.auth.getSession().then(async({data})=>{user=data.session?data.session.user:null; await loadLakes(); render()});
+} else home();
+</script>
+</body>
+</html>
