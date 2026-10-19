@@ -137,7 +137,8 @@ async function toggleFavFish(sp){
     favs.fish.push(sp);
     if(user && sb) await sb.from("favorites").insert({user_id: user.id, target_id: sp, type: "fish"});
   }
-  saveFavs(); fishHome();
+  saveFavs();
+  if(currentLake) select(currentLake); else fishHome();
 }
 
 const SPECIES = {hecht:"Hecht",barsch:"Flussbarsch",zander:"Zander",karpfen:"Karpfen",schleie:"Schleie",aal:"Aal",wels:"Wels",
@@ -222,6 +223,17 @@ function regStatus(r,state){
 const dotHtml=s=>`<i class="dot ${s.level}" title="${esc(s.headline)}"></i>`;
 function infoCard(sp,state){
   const s=regStatus(regFor(state,sp,null),state), i=INFO[sp]||["",""];
+  const isFav = favs.fish.includes(sp);
+  return `<details class="info ${s.level}"${s.level==="red"?" open":""}><summary>${fishImg(sp,56)}<div><b>${esc(SPECIES[sp])}</b> ${dotHtml(s)}<div class="mut">${esc(s.headline)} (${esc(STATES[state]||"")})</div></div></summary>
+   <p>${esc(i[0])}</p><p class="mut"><b>Wo er steht:</b> ${esc(i[1])}</p>${s.lines.map((l,k)=>`<p${k===0&&s.level!=="grey"?' style="font-weight:600"':""}>${esc(l)}</p>`).join("")}
+   <button class="ghost" onclick="toggleFavFish('${sp}')" style="width:100%;margin-top:10px">${isFav?"★ Aus Favoriten entfernen":"☆ Zu Favoriten hinzufügen"}</button></details>`;
+}
+
+// Spezielle Info-Karte für Gewässer mit regionalem Bundesland & Einzugsgebiet
+function lakeInfoCard(sp,lake){
+  const state = lake.state;
+  const s = regStatus(regFor(state,sp,lake.basin),state);
+  const i = INFO[sp]||["",""];
   const isFav = favs.fish.includes(sp);
   return `<details class="info ${s.level}"${s.level==="red"?" open":""}><summary>${fishImg(sp,56)}<div><b>${esc(SPECIES[sp])}</b> ${dotHtml(s)}<div class="mut">${esc(s.headline)} (${esc(STATES[state]||"")})</div></div></summary>
    <p>${esc(i[0])}</p><p class="mut"><b>Wo er steht:</b> ${esc(i[1])}</p>${s.lines.map((l,k)=>`<p${k===0&&s.level!=="grey"?' style="font-weight:600"':""}>${esc(l)}</p>`).join("")}
@@ -422,10 +434,15 @@ async function select(id){
    ${loadErr?`<p class="err">Daten konnten nicht geladen werden: ${esc(loadErr)}</p>`:""}
    ${SPECIAL[lake.id]?`<div class="note">${esc(SPECIAL[lake.id])}</div>`:""}
    <h3>Fischarten</h3>
-   ${rows.map(([sp,a])=>`<div class="sp">${fishImg(sp,30)} ${dotHtml(regStatus(regFor(lake.state,sp,lake.basin),lake.state))} <b>${esc(SPECIES[sp]||sp)}</b><span class="badge">${status(a)}</span>
-     ${a.stocked&&a.count>0?'<span class="badge nat">Besatz</span>':""}${a.gone?`<span class="badge w">${a.gone}× als verschwunden gemeldet</span>`:""}
-     ${a.count>0?`<p class="mut">${freq(a.count)} (${a.count} Fänge), letzter Fang ${fmt(a.last)}${a.topLure?`, Top-Köder: ${esc(a.topLure.name)} (${a.topLure.share} %)`:""}</p>`
-     :`<p class="mut">Noch keine Fänge in der App registriert</p>`}</div>`).join("")}
+   ${rows.map(([sp,a])=>`
+     ${lakeInfoCard(sp, lake)}
+     <div class="sp" style="margin-top:-6px; border-top:0; border-top-left-radius:0; border-top-right-radius:0; padding-top:4px;">
+       <span class="badge">${status(a)}</span>
+       ${a.stocked&&a.count>0?'<span class="badge nat">Besatz</span>':""}${a.gone?`<span class="badge w">${a.gone}× als verschwunden gemeldet</span>`:""}
+       ${a.count>0?`<p class="mut" style="margin-top:6px">${freq(a.count)} (${a.count} Fänge), letzter Fang ${fmt(a.last)}${a.topLure?`, Top-Köder: ${esc(a.topLure.name)} (${a.topLure.share} %)`:""}</p>`
+       :`<p class="mut" style="margin-top:6px">Noch keine Fänge in der App registriert</p>`}
+     </div>
+   `).join("")}
    ${user?`<h3>Fang eintragen</h3>
    <form id="catchForm"><select name="species" aria-label="Fischart">${opts}</select>
      <input name="lure" placeholder="Köder, z. B. Gummifisch" maxlength="60">
@@ -554,7 +571,7 @@ window.initMap = function(){
     streetViewControl:false,
     fullscreenControl:false
   });
-  map.addListener("click",e=>{ if(picking) setPicked(e.latLng.lat(),e.latLng.lng(),false) });
+  map.addListener("click",e=>{.0 if(picking) setPicked(e.latLng.lat(),e.latLng.lng(),false) });
   syncMarkers();
 };
 
