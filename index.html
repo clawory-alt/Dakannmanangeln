@@ -443,11 +443,6 @@ async function select(id){
        :`<p class="mut" style="margin-top:6px">Noch keine Fänge in der App registriert</p>`}
      </div>
    `).join("")}
-
-   <div class="note" style="margin-top:16px;">
-     <b>Hinweis:</b> Alle Angaben zu Schonzeiten und Schonmaßen haben keine rechtliche Grundlage. Bitte schaue für verbindliche Infos unbedingt auf deine offizielle Angelkarte bzw. Erlaubniskarte. Vergiß außerdem nicht, dir vor dem Angeln eine gültige Angelkarte für das Gewässer zu besorgen!
-   </div>
-
    ${user?`<h3>Fang eintragen</h3>
    <form id="catchForm"><select name="species" aria-label="Fischart">${opts}</select>
      <input name="lure" placeholder="Köder, z. B. Gummifisch" maxlength="60">
@@ -576,7 +571,7 @@ window.initMap = function(){
     streetViewControl:false,
     fullscreenControl:false
   });
-  map.addListener("click",e=>{ if(picking) setPicked(e.latLng.lat(),e.latLng.lng(),false) });
+  map.addListener("click",e=>{.0 if(picking) setPicked(e.latLng.lat(),e.latLng.lng(),false) });
   syncMarkers();
 };
 
