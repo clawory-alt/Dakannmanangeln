@@ -77,6 +77,7 @@ let mode = "lake", fishSel = null;
 let REG = [];
 let myState = (()=>{try{return localStorage.getItem("myState")||"BY"}catch(e){return "BY"}})();
 
+// Basis-Hilfsfunktionen
 const esc = s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt = iso=>new Date(iso).toLocaleDateString("de-DE");
 const freq = n=>n>=10?"sehr häufig":n>=4?"häufig":"selten";
@@ -99,6 +100,7 @@ function topLure(cs){
   const t=Object.entries(m).sort((a,b)=>b[1]-a[1])[0]; return t?t[0]:null;
 }
 
+// Favoriten Management (Lokal + Cloud Sync)
 let favs = (()=>{try{return JSON.parse(localStorage.getItem("myFavs")||'{"lakes":[],"fish":[]}')}catch(e){return {lakes:[],fish:[]}}})();
 function saveFavs(){try{localStorage.setItem("myFavs",JSON.stringify(favs))}catch(e){}}
 
@@ -227,6 +229,7 @@ function infoCard(sp,state){
    <button class="ghost" onclick="toggleFavFish('${sp}')" style="width:100%;margin-top:10px">${isFav?"★ Aus Favoriten entfernen":"☆ Zu Favoriten hinzufügen"}</button></details>`;
 }
 
+// Spezielle Info-Karte für Gewässer mit regionalem Bundesland & Einzugsgebiet
 function lakeInfoCard(sp,lake){
   const state = lake.state;
   const s = regStatus(regFor(state,sp,lake.basin),state);
@@ -312,6 +315,7 @@ const tabs = ()=>`<div class="tabs">
 </div>`;
 function bindTabs(){ document.querySelectorAll(".tabs [data-m]").forEach(b=>b.onclick=()=>{mode=b.dataset.m;home()}); }
 
+/* ============ GPS-STANDORTERKENNUNG ============ */
 function findNearestLakeByGPS() {
   if (!navigator.geolocation) {
     alert("Dein Browser unterstützt keine Geolocation.");
@@ -441,7 +445,7 @@ async function select(id){
    `).join("")}
 
    <div class="note" style="margin-top:16px;">
-     🎣 <b>Petri Heil!</b> Bitte schaut für verbindliche Schonmaße und Schonzeiten immer auf eure Angelkarte. Und denkt dran: Holt euch vor dem nächsten Trip immer schön eure Erlaubniskarte!
+     <b>Hinweis:</b> Alle Angaben zu Schonzeiten und Schonmaßen haben keine rechtliche Grundlage. Bitte schaue für verbindliche Infos unbedingt auf deine offizielle Angelkarte bzw. Erlaubniskarte. Vergiß außerdem nicht, dir vor dem Angeln eine gültige Angelkarte für das Gewässer zu besorgen!
    </div>
 
    ${user?`<h3>Fang eintragen</h3>
@@ -578,9 +582,8 @@ window.initMap = function(){
 
 if(GMAPS_KEY){
   const s=document.createElement("script");
-  s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GMAPS_KEY)}&callback=initMap`;
-  s.async=true; s.defer=true;
-  document.head.appendChild(s);
+  s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GMAPS_KEY)}&callback=initMap&loading=async`;
+  s.async=true; document.head.appendChild(s);
 } else document.getElementById("map").innerHTML='<p class="mut" style="padding:24px">Karte erscheint, sobald ein Google-Maps-Key eingetragen ist.</p>';
 
 if(sb){
