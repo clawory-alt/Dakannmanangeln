@@ -184,7 +184,7 @@ function fishSvg(id){
   if(f==="f") x+=`<path d="M24 ${16-ry} Q34 ${16-ry-12} 46 ${16-ry}Z" fill="#6a5a9a" opacity=".8"/>`;
   return `<svg viewBox="0 0 64 32" aria-hidden="true">${x}</svg>`;
 }
-const fishImg=(id,px)=>`<span class="fi" style="width:${px}px;height:${Math.round(px*.66)}px">${fishSvg(id)}<img src="fische/${id}.jpg" alt="" loading="lazy" onerror="this.remove()"></span>`;
+const fishImg=(id,px)=>`<span class="fi" style="width:${px}px;height:${Math.round(px*.66)}px">${fishSvg(id)}<img src="fische/${id}.jpeg" alt="" loading="lazy" onerror="this.remove()"></span>`;
 
 function regFor(state,sp,basin){
   const all=REG.filter(r=>r.state===state&&r.species===sp);
