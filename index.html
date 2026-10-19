@@ -12,8 +12,8 @@ body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif
 #map{height:100%;background:var(--bg)}
 aside{background:var(--pan);border-left:1px solid var(--line);overflow:auto;padding:22px;display:flex;flex-direction:column}
 #panel{flex:1}
-.tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--card);padding:4px;border-radius:10px;margin:14px 0}
-.tabs button{background:transparent;color:var(--mut);padding:7px}.tabs button.on{background:var(--acc);color:#04101d}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--card);padding:4px;border-radius:10px;margin:14px 0}
+.tabs button{background:transparent;color:var(--mut);padding:7px;font-size:0.85rem}.tabs button.on{background:var(--acc);color:#04101d}
 .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
 .tile{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px 8px;background:var(--card);border:1px solid var(--line);color:var(--ink);font-weight:500;font-size:.82rem}
 .tile.on{border-color:var(--acc);background:var(--acc2)}
@@ -76,6 +76,69 @@ const markers = {};
 let mode = "lake", fishSel = null;
 let REG = [];
 let myState = (()=>{try{return localStorage.getItem("myState")||"BY"}catch(e){return "BY"}})();
+
+// Basis-Hilfsfunktionen
+const esc = s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = iso=>new Date(iso).toLocaleDateString("de-DE");
+const freq = n=>n>=10?"sehr häufig":n>=4?"häufig":"selten";
+
+function resetMarkers(){
+  if(!window.map) return;
+  Object.values(markers).forEach(m=>{m.setIcon(dot("#3b9cff"));m.setZIndex(1)});
+}
+
+function highlightMarkers(ids){
+  if(!window.map) return;
+  Object.entries(markers).forEach(([id,m])=>{
+    const on=ids.has(id); m.setIcon(on?{...dot("#3b9cff"),scale:10}:{...dot("#2a3446"),scale:5}); m.setZIndex(on?10:0);
+  });
+}
+
+function topLure(cs){
+  if(!cs || !cs.length) return null;
+  const m={}; cs.forEach(c=>{if(c.lure){const k=c.lure.trim().toLowerCase();m[k]=(m[k]||0)+1}});
+  const t=Object.entries(m).sort((a,b)=>b[1]-a[1])[0]; return t?t[0]:null;
+}
+
+// Favoriten Management (Lokal + Cloud Sync)
+let favs = (()=>{try{return JSON.parse(localStorage.getItem("myFavs")||'{"lakes":[],"fish":[]}')}catch(e){return {lakes:[],fish:[]}}})();
+function saveFavs(){try{localStorage.setItem("myFavs",JSON.stringify(favs))}catch(e){}}
+
+async function loadCloudFavs(){
+  if(!user || !sb) return;
+  try {
+    const {data, error} = await sb.from("favorites").select("target_id,type").eq("user_id", user.id);
+    if(!error && data){
+      favs.lakes = data.filter(d=>d.type==="lake").map(d=>d.target_id);
+      favs.fish = data.filter(d=>d.type==="fish").map(d=>d.target_id);
+      saveFavs();
+    }
+  } catch(e) { console.error("Cloud-Favoriten Fehler:", e); }
+}
+
+async function toggleFavLake(id){
+  const idx = favs.lakes.indexOf(id);
+  if(idx>-1) {
+    favs.lakes.splice(idx,1);
+    if(user && sb) await sb.from("favorites").delete().eq("user_id", user.id).eq("target_id", id).eq("type", "lake");
+  } else {
+    favs.lakes.push(id);
+    if(user && sb) await sb.from("favorites").insert({user_id: user.id, target_id: id, type: "lake"});
+  }
+  saveFavs(); select(id);
+}
+
+async function toggleFavFish(sp){
+  const idx = favs.fish.indexOf(sp);
+  if(idx>-1) {
+    favs.fish.splice(idx,1);
+    if(user && sb) await sb.from("favorites").delete().eq("user_id", user.id).eq("target_id", sp).eq("type", "fish");
+  } else {
+    favs.fish.push(sp);
+    if(user && sb) await sb.from("favorites").insert({user_id: user.id, target_id: sp, type: "fish"});
+  }
+  saveFavs(); fishHome();
+}
 
 const SPECIES = {hecht:"Hecht",barsch:"Flussbarsch",zander:"Zander",karpfen:"Karpfen",schleie:"Schleie",aal:"Aal",wels:"Wels",
  rotauge:"Rotauge",brachse:"Brachse",rotfeder:"Rotfeder",renke:"Renke (Felchen)",seeforelle:"Seeforelle",saibling:"Seesaibling",
@@ -159,8 +222,10 @@ function regStatus(r,state){
 const dotHtml=s=>`<i class="dot ${s.level}" title="${esc(s.headline)}"></i>`;
 function infoCard(sp,state){
   const s=regStatus(regFor(state,sp,null),state), i=INFO[sp]||["",""];
+  const isFav = favs.fish.includes(sp);
   return `<details class="info ${s.level}"${s.level==="red"?" open":""}><summary>${fishImg(sp,56)}<div><b>${esc(SPECIES[sp])}</b> ${dotHtml(s)}<div class="mut">${esc(s.headline)} (${esc(STATES[state]||"")})</div></div></summary>
-   <p>${esc(i[0])}</p><p class="mut"><b>Wo er steht:</b> ${esc(i[1])}</p>${s.lines.map((l,k)=>`<p${k===0&&s.level!=="grey"?' style="font-weight:600"':""}>${esc(l)}</p>`).join("")}</details>`;
+   <p>${esc(i[0])}</p><p class="mut"><b>Wo er steht:</b> ${esc(i[1])}</p>${s.lines.map((l,k)=>`<p${k===0&&s.level!=="grey"?' style="font-weight:600"':""}>${esc(l)}</p>`).join("")}
+   <button class="ghost" onclick="toggleFavFish('${sp}')" style="width:100%;margin-top:10px">${isFav?"★ Aus Favoriten entfernen":"☆ Zu Favoriten hinzufügen"}</button></details>`;
 }
 
 function aggregate(lake, catches, reports){
@@ -185,14 +250,12 @@ function status(a){
   if(a.stocked) return "Besatz gemeldet";
   return "Unbestätigt";
 }
-const freq = n=>n>=10?"sehr häufig":n>=4?"häufig":"selten";
-const esc = s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const fmt = iso=>new Date(iso).toLocaleDateString("de-DE");
+
 const panel = document.getElementById("panel");
 
 const G_ICON = '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>';
 function authBar(){
-  if(!sb) return `<div class="note">Supabase ist nicht verbunden. Trage <code>SUPABASE_URL</code> und <code>SUPABASE_ANON_KEY</code> im Code ein.</div>`;
+  if(!sb) return `<div class="note">Supabase ist nicht verbunden. Trage <code>SUPABASE_URL</code> und <code>SUPABASE_ANON_KEY</code> ein.</div>`;
   if(user) return `<div class="bar row"><span class="mut">${esc(user.email||"Angemeldet")}</span><button class="ghost" id="logout">Abmelden</button></div>`;
   return `<div class="bar"><button class="g" id="google">${G_ICON}Mit Google anmelden</button><div class="or">oder mit E-Mail</div>
     <form id="authForm" style="margin:0">
@@ -232,6 +295,13 @@ async function loadLakes(){
 }
 
 function render(){ picking=false; currentLake ? select(currentLake) : home(); }
+
+const tabs = ()=>`<div class="tabs">
+  <button class="${mode==="lake"?"on":""}" data-m="lake">Gewässer</button>
+  <button class="${mode==="fish"?"on":""}" data-m="fish">Fischarten</button>
+  <button class="${mode==="fav"?"on":""}" data-m="fav">⭐ Favoriten</button>
+</div>`;
+function bindTabs(){ document.querySelectorAll(".tabs [data-m]").forEach(b=>b.onclick=()=>{mode=b.dataset.m;home()}); }
 
 /* ============ GPS-STANDORTERKENNUNG ============ */
 function findNearestLakeByGPS() {
@@ -286,6 +356,8 @@ function findNearestLakeByGPS() {
 function home(filter=""){
   currentLake = null; picking = false; resetMarkers();
   if(mode==="fish"){fishHome();return}
+  if(mode==="fav"){favHome();return}
+
   panel.innerHTML = `${authBar()}<h1>Da kann man Angeln</h1>${tabs()}
    
    <button onclick="findNearestLakeByGPS()" style="width:100%;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;">
@@ -308,6 +380,25 @@ function home(filter=""){
   bindAuth(); bindTabs();
 }
 
+function favHome(){
+  panel.innerHTML = `${authBar()}<h1>Da kann man Angeln</h1>${tabs()}
+   <h3>⭐ Deine Lieblings-Gewässer</h3>
+   <div class="list" id="favLakes"></div>
+   <h3>⭐ Deine Lieblings-Fischarten</h3>
+   <div class="tiles" id="favFish"></div>`;
+  bindAuth(); bindTabs();
+
+  const favLakeList = LAKES.filter(l=>favs.lakes.includes(l.id));
+  document.getElementById("favLakes").innerHTML = favLakeList.length ? favLakeList.map(l=>`<button data-id="${esc(l.id)}">⭐ ${esc(l.name)} <span class="mut">${TYPES[l.type]||""}</span></button>`).join("") : `<p class="mut">Noch keine Gewässer favorisiert.</p>`;
+  document.querySelectorAll("#favLakes [data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id));
+
+  const favFishTiles = favs.fish.map(sp=>`<button class="tile" data-sp="${sp}">${fishImg(sp,48)}<span>${esc(SPECIES[sp])}</span>${dotHtml(regStatus(regFor(myState,sp,null),myState))}</button>`).join("");
+  document.getElementById("favFish").innerHTML = favs.fish.length ? favFishTiles : `<p class="mut" style="grid-column: span 3">Noch keine Fischarten favorisiert.</p>`;
+  document.querySelectorAll("#favFish [data-sp]").forEach(b=>b.onclick=()=>{
+    mode="fish"; fishSel=b.dataset.sp; home();
+  });
+}
+
 async function select(id){
   currentLake = id; picking = false;
   const lake = LAKES.find(l=>l.id===id); if(!lake){home();return}
@@ -320,9 +411,14 @@ async function select(id){
   const agg = aggregate(lake,catches,reports);
   const rows = Object.entries(agg).sort((a,b)=>b[1].count-a[1].count||SPECIES[a[0]].localeCompare(SPECIES[b[0]]));
   const opts = speciesOpts.map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join("");
+  const isFav = favs.lakes.includes(id);
+
   panel.innerHTML = `${authBar()}<button class="ghost" id="back">Zurück zur Übersicht</button>
    <h2 style="margin-top:14px">${esc(lake.name)}</h2>
    <p class="mut">${TYPES[lake.type]||""}${lake.state?`, ${esc(STATES[lake.state]||"")}`:""}, ${catches.length} gemeldete Fänge, ${rows.length} Fischarten</p>
+   
+   <button class="ghost" onclick="toggleFavLake('${id}')" style="width:100%;margin:10px 0">${isFav?"⭐ Aus Favoriten entfernen":"☆ Zu Favoriten hinzufügen"}</button>
+
    ${loadErr?`<p class="err">Daten konnten nicht geladen werden: ${esc(loadErr)}</p>`:""}
    ${SPECIAL[lake.id]?`<div class="note">${esc(SPECIAL[lake.id])}</div>`:""}
    <h3>Fischarten</h3>
@@ -356,22 +452,6 @@ async function select(id){
   };
 }
 
-const tabs = ()=>`<div class="tabs"><button class="${mode==="lake"?"on":""}" data-m="lake">Nach Gewässer</button><button class="${mode==="fish"?"on":""}" data-m="fish">Nach Fischart</button></div>`;
-function bindTabs(){ document.querySelectorAll(".tabs [data-m]").forEach(b=>b.onclick=()=>{mode=b.dataset.m;home()}); }
-function topLure(cs){
-  const m={}; cs.forEach(c=>{if(c.lure){const k=c.lure.trim().toLowerCase();m[k]=(m[k]||0)+1}});
-  const t=Object.entries(m).sort((a,b)=>b[1]-a[1])[0]; return t?t[0]:null;
-}
-function resetMarkers(){
-  if(!window.map) return;
-  Object.values(markers).forEach(m=>{m.setIcon(dot("#3b9cff"));m.setZIndex(1)});
-}
-function highlightMarkers(ids){
-  if(!window.map) return;
-  Object.entries(markers).forEach(([id,m])=>{
-    const on=ids.has(id); m.setIcon(on?{...dot("#3b9cff"),scale:10}:{...dot("#2a3446"),scale:5}); m.setZIndex(on?10:0);
-  });
-}
 function fishHome(){
   panel.innerHTML = `${authBar()}<h1>Da kann man Angeln</h1>${tabs()}
    <p class="mut">Worauf hast du heute Lust? Tippe auf eine Fischart.</p>
@@ -456,7 +536,7 @@ function setPicked(lat,lng,pan){
 }
 function clearTmp(){if(tmpMarker){tmpMarker.setMap(null);tmpMarker=null}picking=false}
 
-/* ============ GOOGLE MAPS (Satellit / Hybrid mit Umschalter) ============ */
+/* ============ GOOGLE MAPS ============ */
 const dot = c=>({path:google.maps.SymbolPath.CIRCLE,scale:8,fillColor:c,fillOpacity:1,strokeColor:"#ffffff",strokeWeight:2});
 function syncMarkers(){
   if(!window.map) return;
@@ -467,10 +547,10 @@ function syncMarkers(){
 
 window.initMap = function(){
   window.map = new google.maps.Map(document.getElementById("map"),{
-    center:{lat:48.1371, lng:11.5754}, // Startpunkt München
+    center:{lat:48.1371, lng:11.5754},
     zoom:7,
-    mapTypeId:"hybrid",          // Satellitenansicht mit Straßennamen und Orten
-    mapTypeControl:true,         // Zeigt den Umschalter oben links an
+    mapTypeId:"hybrid",
+    mapTypeControl:true,
     streetViewControl:false,
     fullscreenControl:false
   });
@@ -485,8 +565,17 @@ if(GMAPS_KEY){
 } else document.getElementById("map").innerHTML='<p class="mut" style="padding:24px">Karte erscheint, sobald ein Google-Maps-Key eingetragen ist.</p>';
 
 if(sb){
-  sb.auth.onAuthStateChange((_e,session)=>{user=session?session.user:null; if(!picking) render()});
-  sb.auth.getSession().then(async({data})=>{user=data.session?data.session.user:null; await loadLakes(); render()});
+  sb.auth.onAuthStateChange(async (_e,session)=>{
+    user=session?session.user:null; 
+    if(user) await loadCloudFavs();
+    if(!picking) render();
+  });
+  sb.auth.getSession().then(async({data})=>{
+    user=data.session?data.session.user:null; 
+    if(user) await loadCloudFavs();
+    await loadLakes(); 
+    render();
+  });
 } else home();
 </script>
 </body>
