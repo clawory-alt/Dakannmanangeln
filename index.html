@@ -73,7 +73,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_eV71cPJvqzEskXDvOFmVSQ_4iFWYUqP";
 const sb = (SUPABASE_URL && SUPABASE_ANON_KEY) ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 let user = null, LAKES = [], currentLake = null, picking = false, picked = null, tmpMarker = null;
 const markers = {};
-let mode = "lake", fishSel = null; // mode: "lake" (nach Gewässer) oder "fish" (nach Fischart)
+let mode = "lake", fishSel = null;
 let REG = [];
 let myState = (()=>{try{return localStorage.getItem("myState")||"BY"}catch(e){return "BY"}})();
 
@@ -121,7 +121,6 @@ function fishSvg(id){
   if(f==="f") x+=`<path d="M24 ${16-ry} Q34 ${16-ry-12} 46 ${16-ry}Z" fill="#6a5a9a" opacity=".8"/>`;
   return `<svg viewBox="0 0 64 32" aria-hidden="true">${x}</svg>`;
 }
-// Echte Fotos: Datei fische/<id>.jpg ablegen (z. B. fische/zander.jpg), sie überdeckt automatisch die Zeichnung.
 const fishImg=(id,px)=>`<span class="fi" style="width:${px}px;height:${Math.round(px*.66)}px">${fishSvg(id)}<img src="fische/${id}.jpg" alt="" loading="lazy" onerror="this.remove()"></span>`;
 
 function regFor(state,sp,basin){
@@ -164,8 +163,6 @@ function infoCard(sp,state){
    <p>${esc(i[0])}</p><p class="mut"><b>Wo er steht:</b> ${esc(i[1])}</p>${s.lines.map((l,k)=>`<p${k===0&&s.level!=="grey"?' style="font-weight:600"':""}>${esc(l)}</p>`).join("")}</details>`;
 }
 
-
-/* ============ AGGREGATION ============ */
 function aggregate(lake, catches, reports){
   const out = {}, ids = new Set(lake.base);
   catches.forEach(c=>ids.add(c.species));
@@ -193,7 +190,6 @@ const esc = s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt
 const fmt = iso=>new Date(iso).toLocaleDateString("de-DE");
 const panel = document.getElementById("panel");
 
-/* ============ AUTH ============ */
 const G_ICON = '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>';
 function authBar(){
   if(!sb) return `<div class="note">Supabase ist nicht verbunden. Trage <code>SUPABASE_URL</code> und <code>SUPABASE_ANON_KEY</code> im Code ein.</div>`;
@@ -223,16 +219,18 @@ function bindAuth(){
   };
 }
 
-/* ============ DATEN ============ */
 async function loadLakes(){
-  const {data,error} = await sb.from("waterbodies").select("id,name,type,lat,lng,base,state,basin").order("name").limit(5000);
-  if(error){alert("Gewässer konnten nicht geladen werden: "+error.message);return}
-  LAKES = data; syncMarkers();
-  const rg = await sb.from("regulations").select("state,species,closed_from,closed_to,all_year,min_cm,basins,note").limit(5000);
-  REG = rg.data||[];
+  try {
+    const {data,error} = await sb.from("waterbodies").select("id,name,type,lat,lng,base,state,basin").order("name").limit(5000);
+    if(error){ console.error("Gewässer konnten nicht geladen werden: "+error.message); }
+    LAKES = data || []; syncMarkers();
+    const rg = await sb.from("regulations").select("state,species,closed_from,closed_to,all_year,min_cm,basins,note").limit(5000);
+    REG = rg.data||[];
+  } catch(e) {
+    console.error("Fehler beim Laden:", e);
+  }
 }
 
-/* ============ ANZEIGE ============ */
 function render(){ picking=false; currentLake ? select(currentLake) : home(); }
 
 function home(filter=""){
@@ -303,7 +301,6 @@ async function select(id){
   };
 }
 
-/* ============ SUCHE NACH FISCHART ============ */
 const tabs = ()=>`<div class="tabs"><button class="${mode==="lake"?"on":""}" data-m="lake">Nach Gewässer</button><button class="${mode==="fish"?"on":""}" data-m="fish">Nach Fischart</button></div>`;
 function bindTabs(){ document.querySelectorAll(".tabs [data-m]").forEach(b=>b.onclick=()=>{mode=b.dataset.m;home()}); }
 function topLure(cs){
@@ -365,7 +362,6 @@ async function showFish(){
   box.querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id));
 }
 
-/* ============ NEUES GEWÄSSER ============ */
 function showAdd(){
   currentLake = null; picking = true; picked = null;
   panel.innerHTML = `${authBar()}<button class="ghost" id="cancel">Abbrechen</button>
@@ -419,7 +415,7 @@ function syncMarkers(){
 }
 window.initMap = function(){
   window.map = new google.maps.Map(document.getElementById("map"),{center:{lat:51.2,lng:10.4},zoom:6,mapTypeId:"hybrid",
-    backgroundColor:"#07090d",mapTypeControl:true,streetViewControl:false,fullscreenControl:false});
+    backgroundColor:"#07090d",mapTypeControl:true,streetViewControl:false,fullscreenControl:false,styles:DARK});
   map.addListener("click",e=>{ if(picking) setPicked(e.latLng.lat(),e.latLng.lng(),false) });
   syncMarkers();
 };
@@ -429,7 +425,6 @@ if(GMAPS_KEY){
   s.async=true; document.head.appendChild(s);
 } else document.getElementById("map").innerHTML='<p class="mut" style="padding:24px">Karte erscheint, sobald ein Google-Maps-Key eingetragen ist.</p>';
 
-/* ============ START ============ */
 if(sb){
   sb.auth.onAuthStateChange((_e,session)=>{user=session?session.user:null; if(!picking) render()});
   sb.auth.getSession().then(async({data})=>{user=data.session?data.session.user:null; await loadLakes(); render()});
