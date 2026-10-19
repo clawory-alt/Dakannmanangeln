@@ -509,7 +509,7 @@ async function showFish(){
     .sort((a,b)=>b.n-a.n||(b.native-a.native)||a.l.name.localeCompare(b.l.name));
   const total=(c.data||[]).length, lure=topLure(c.data||[]);
   highlightMarkers(new Set(rows.map(x=>x.l.id)));
-  if(window.map&&rows.length){const b=new google.maps.LatLngBounds();rows.forEach(x=>b.extend({lat:x.l.lat,lng:x.l.lng}));map.fitBounds(b,60)}
+  if(window.map&&rows.length){const b=new google.maps.LatLngBounds();rows.forEach(x=>b.extend({lat:x.l.lng?x.l.lat:0,lng:x.l.lng}));map.fitBounds(b,60)}
   box.innerHTML = `${infoCard(sp,myState)}<h3>${esc(SPECIES[sp])}: ${rows.length} Gewässer</h3>
    <p class="mut">${total} gemeldete Fänge in der Community${lure?`, beliebtester Köder: ${esc(lure)}`:""}</p>
    <div class="list">${rows.map(x=>`<button data-id="${esc(x.l.id)}">${dotHtml(regStatus(regFor(x.l.state,sp,x.l.basin),x.l.state))} <b>${esc(x.l.name)}</b> <span class="mut">${TYPES[x.l.type]||""}</span><br>
