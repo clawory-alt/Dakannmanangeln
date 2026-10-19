@@ -233,10 +233,67 @@ async function loadLakes(){
 
 function render(){ picking=false; currentLake ? select(currentLake) : home(); }
 
+/* ============ GPS-STANDORTERKENNUNG ============ */
+function findNearestLakeByGPS() {
+  if (!navigator.geolocation) {
+    alert("Dein Browser unterstützt keine Geolocation.");
+    return;
+  }
+  panel.innerHTML = `<h1>Da kann man Angeln</h1><p class="mut">Ermittle deinen GPS-Standort...</p>`;
+
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      const userLat = position.coords.latitude;
+      const userLng = position.coords.longitude;
+
+      if (!LAKES.length) {
+        alert("Keine Gewässer geladen.");
+        home();
+        return;
+      }
+
+      let nearest = null;
+      let minDistance = Infinity;
+
+      LAKES.forEach(lake => {
+        const dist = Math.hypot(lake.lat - userLat, lake.lng - userLng);
+        if (dist < minDistance) {
+          minDistance = dist;
+          nearest = lake;
+        }
+      });
+
+      // Wenn im Umkreis (ca. 15 km)
+      if (nearest && minDistance < 0.15) { 
+        select(nearest.id);
+        if (window.map) {
+          map.setCenter({ lat: nearest.lat, lng: nearest.lng });
+          map.setZoom(13);
+        }
+      } else {
+        panel.innerHTML = `<h1>Da kann man Angeln</h1>
+         <p class="mut" style="color:var(--warn); margin:12px 0;">Kein Gewässer in deiner unmittelbaren Nähe gefunden.</p>
+         <button class="ghost" onclick="home()">Zurück zur Übersicht</button>`;
+      }
+    },
+    error => {
+      alert("Standort konnte nicht ermittelt werden: " + error.message);
+      home();
+    },
+    { enableHighAccuracy: true }
+  );
+}
+
 function home(filter=""){
   currentLake = null; picking = false; resetMarkers();
   if(mode==="fish"){fishHome();return}
   panel.innerHTML = `${authBar()}<h1>Da kann man Angeln</h1>${tabs()}
+   
+   <!-- GPS Button -->
+   <button onclick="findNearestLakeByGPS()" style="width:100%;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;">
+     📍 Am Gewässer? GPS-Standort erkennen
+   </button>
+
    <p class="mut">${LAKES.length} Gewässer. Wähle eines auf der Karte oder suche hier.</p>
    ${GMAPS_KEY?"":`<div class="note">Noch kein Google-Maps-Key eingetragen (<code>GMAPS_KEY</code>).</div>`}
    <form onsubmit="return false"><input id="q" type="search" placeholder="Gewässer suchen" value="${esc(filter)}" autocomplete="off"></form>
@@ -285,7 +342,7 @@ async function select(id){
      <select name="type" aria-label="Art der Meldung"><option value="besatz">Hier wurde Besatz eingebracht</option><option value="weg">Art kommt hier nicht mehr vor</option></select>
      <button class="ghost">Meldung senden</button><p class="err" id="repErr"></p></form>`
    :`<div class="note">Melde dich an, um Fänge einzutragen oder Meldungen abzugeben.</div>`}`;
-  document.getElementById("back").onclick = ()=>{if(window.map){map.setCenter({lat:51.2,lng:10.4});map.setZoom(6)}home()};
+  document.getElementById("back").onclick = ()=>{if(window.map){map.setCenter({lat:48.1371,lng:11.5754});map.setZoom(7)}home()};
   bindAuth();
   const cf = document.getElementById("catchForm");
   if(cf) cf.onsubmit = async e=>{
@@ -402,10 +459,17 @@ function setPicked(lat,lng,pan){
 function clearTmp(){if(tmpMarker){tmpMarker.setMap(null);tmpMarker=null}picking=false}
 
 /* ============ GOOGLE MAPS ============ */
-const DARK = [{elementType:"geometry",stylers:[{color:"#0b0f16"}]},{elementType:"labels.text.fill",stylers:[{color:"#7d8aa0"}]},
- {elementType:"labels.text.stroke",stylers:[{color:"#0b0f16"}]},{featureType:"water",elementType:"geometry",stylers:[{color:"#0d3b72"}]},
- {featureType:"road",elementType:"geometry",stylers:[{color:"#161d29"}]},{featureType:"poi",stylers:[{visibility:"off"}]},
- {featureType:"transit",stylers:[{visibility:"off"}]},{featureType:"administrative",elementType:"geometry.stroke",stylers:[{color:"#1f2937"}]}];
+const DARK = [
+  {elementType:"geometry",stylers:[{color:"#0b0f16"}]},
+  {elementType:"labels.text.fill",stylers:[{color:"#ffffff"}]}, // Weiße Schrift auf Satellit
+  {elementType:"labels.text.stroke",stylers:[{color:"#000000"},{weight:2}]}, // Schwarzer Rand für Lesbarkeit
+  {featureType:"water",elementType:"geometry",stylers:[{color:"#0d3b72"}]},
+  {featureType:"road",elementType:"geometry",stylers:[{color:"#161d29"}]},
+  {featureType:"poi",stylers:[{visibility:"off"}]},
+  {featureType:"transit",stylers:[{visibility:"off"}]},
+  {featureType:"administrative",elementType:"geometry.stroke",stylers:[{color:"#1f2937"}]}
+];
+
 const dot = c=>({path:google.maps.SymbolPath.CIRCLE,scale:8,fillColor:c,fillOpacity:1,strokeColor:"#ffffff",strokeWeight:2});
 function syncMarkers(){
   if(!window.map) return;
@@ -413,12 +477,22 @@ function syncMarkers(){
     const m = new google.maps.Marker({position:{lat:l.lat,lng:l.lng},map,title:l.name,icon:dot("#3b9cff")});
     m.addListener("click",()=>{ if(!picking) select(l.id) }); markers[l.id]=m; });
 }
+
 window.initMap = function(){
-  window.map = new google.maps.Map(document.getElementById("map"),{center:{lat:51.2,lng:10.4},zoom:6,mapTypeId:"hybrid",
-    backgroundColor:"#07090d",mapTypeControl:true,streetViewControl:false,fullscreenControl:false,styles:DARK});
+  window.map = new google.maps.Map(document.getElementById("map"),{
+    center:{lat:48.1371, lng:11.5754}, // Startpunkt München
+    zoom:7,
+    mapTypeId:"hybrid",
+    backgroundColor:"#07090d",
+    mapTypeControl:true,
+    streetViewControl:false,
+    fullscreenControl:false,
+    styles:DARK
+  });
   map.addListener("click",e=>{ if(picking) setPicked(e.latLng.lat(),e.latLng.lng(),false) });
   syncMarkers();
 };
+
 if(GMAPS_KEY){
   const s=document.createElement("script");
   s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GMAPS_KEY)}&callback=initMap&loading=async`;
