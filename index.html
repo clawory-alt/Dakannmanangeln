@@ -78,7 +78,7 @@ let REG = [];
 let myState = (()=>{try{return localStorage.getItem("myState")||"BY"}catch(e){return "BY"}})();
 
 // Favoriten Management
-let favs = (()=>{try{return JSON.parse(localStorage.getItem("myFavs")||'{"lakes":[],"fish":[]}')}catch(e){return {lakes:[],fish:[]}}})();
+let favs = {lakes:[], fish:[]};
 function saveFavs(){try{localStorage.setItem("myFavs",JSON.stringify(favs))}catch(e){}}
 
 async function loadCloudFavs(){
