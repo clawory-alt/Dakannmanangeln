@@ -263,7 +263,6 @@ function findNearestLakeByGPS() {
         }
       });
 
-      // Wenn im Umkreis (ca. 15 km)
       if (nearest && minDistance < 0.15) { 
         select(nearest.id);
         if (window.map) {
@@ -289,7 +288,6 @@ function home(filter=""){
   if(mode==="fish"){fishHome();return}
   panel.innerHTML = `${authBar()}<h1>Da kann man Angeln</h1>${tabs()}
    
-   <!-- GPS Button -->
    <button onclick="findNearestLakeByGPS()" style="width:100%;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;">
      📍 Am Gewässer? GPS-Standort erkennen
    </button>
@@ -458,18 +456,7 @@ function setPicked(lat,lng,pan){
 }
 function clearTmp(){if(tmpMarker){tmpMarker.setMap(null);tmpMarker=null}picking=false}
 
-/* ============ GOOGLE MAPS ============ */
-const DARK = [
-  {elementType:"geometry",stylers:[{color:"#0b0f16"}]},
-  {elementType:"labels.text.fill",stylers:[{color:"#ffffff"}]}, // Weiße Schrift auf Satellit
-  {elementType:"labels.text.stroke",stylers:[{color:"#000000"},{weight:2}]}, // Schwarzer Rand für Lesbarkeit
-  {featureType:"water",elementType:"geometry",stylers:[{color:"#0d3b72"}]},
-  {featureType:"road",elementType:"geometry",stylers:[{color:"#161d29"}]},
-  {featureType:"poi",stylers:[{visibility:"off"}]},
-  {featureType:"transit",stylers:[{visibility:"off"}]},
-  {featureType:"administrative",elementType:"geometry.stroke",stylers:[{color:"#1f2937"}]}
-];
-
+/* ============ GOOGLE MAPS (Satellit / Hybrid mit Umschalter) ============ */
 const dot = c=>({path:google.maps.SymbolPath.CIRCLE,scale:8,fillColor:c,fillOpacity:1,strokeColor:"#ffffff",strokeWeight:2});
 function syncMarkers(){
   if(!window.map) return;
@@ -482,12 +469,10 @@ window.initMap = function(){
   window.map = new google.maps.Map(document.getElementById("map"),{
     center:{lat:48.1371, lng:11.5754}, // Startpunkt München
     zoom:7,
-    mapTypeId:"hybrid",
-    backgroundColor:"#07090d",
-    mapTypeControl:true,
+    mapTypeId:"hybrid",          // Satellitenansicht mit Straßennamen und Orten
+    mapTypeControl:true,         // Zeigt den Umschalter oben links an
     streetViewControl:false,
-    fullscreenControl:false,
-    styles:DARK
+    fullscreenControl:false
   });
   map.addListener("click",e=>{ if(picking) setPicked(e.latLng.lat(),e.latLng.lng(),false) });
   syncMarkers();
