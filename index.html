@@ -77,41 +77,18 @@ let mode = "lake", fishSel = null;
 let REG = [];
 let myState = (()=>{try{return localStorage.getItem("myState")||"BY"}catch(e){return "BY"}})();
 
-// Favoriten Management
-let favs = {lakes:[], fish:[]};
+// Favoriten lokal verwalten
+let favs = (()=>{try{return JSON.parse(localStorage.getItem("myFavs")||'{"lakes":[],"fish":[]}')}catch(e){return {lakes:[],fish:[]}}})();
 function saveFavs(){try{localStorage.setItem("myFavs",JSON.stringify(favs))}catch(e){}}
 
-async function loadCloudFavs(){
-  if(!user || !sb) return;
-  const {data} = await sb.from("favorites").select("target_id,type").eq("user_id", user.id);
-  if(data){
-    favs.lakes = data.filter(d=>d.type==="lake").map(d=>d.target_id);
-    favs.fish = data.filter(d=>d.type==="fish").map(d=>d.target_id);
-    saveFavs();
-  }
-}
-
-async function toggleFavLake(id){
+function toggleFavLake(id){
   const idx = favs.lakes.indexOf(id);
-  if(idx>-1) {
-    favs.lakes.splice(idx,1);
-    if(user && sb) await sb.from("favorites").delete().eq("user_id", user.id).eq("target_id", id).eq("type", "lake");
-  } else {
-    favs.lakes.push(id);
-    if(user && sb) await sb.from("favorites").insert({user_id: user.id, target_id: id, type: "lake"});
-  }
+  if(idx>-1) favs.lakes.splice(idx,1); else favs.lakes.push(id);
   saveFavs(); select(id);
 }
-
-async function toggleFavFish(sp){
+function toggleFavFish(sp){
   const idx = favs.fish.indexOf(sp);
-  if(idx>-1) {
-    favs.fish.splice(idx,1);
-    if(user && sb) await sb.from("favorites").delete().eq("user_id", user.id).eq("target_id", sp).eq("type", "fish");
-  } else {
-    favs.fish.push(sp);
-    if(user && sb) await sb.from("favorites").insert({user_id: user.id, target_id: sp, type: "fish"});
-  }
+  if(idx>-1) favs.fish.splice(idx,1); else favs.fish.push(sp);
   saveFavs(); fishHome();
 }
 
@@ -139,7 +116,7 @@ const INFO={
  seeforelle:["Große, silbrige Raubforelle der Alpenseen.","Im tiefen Freiwasser, zur Laichzeit in zufließenden Bächen."],
  saibling:["Kaltwasserfisch der tiefen Alpenseen.","In großer Tiefe über Kiesgrund, bevorzugt sehr kaltes, klares Wasser."],
  bachforelle:["Standorttreue Forelle mit roten Punkten.","In kühlen, sauerstoffreichen Bächen hinter Steinen und unter Uferböschungen."],
- regenbogen:["Eingebürgerte Forelle mit rosa Seitenband.","In Forellenteichen, Seen und Flüssen mit Besatz, meist oberflächennah."],
+ regenbogen:["Eingebürgerte Forelle mit rosa Seitenband.","In Forellenteichen,Seen und Flüssen mit Besatz, meist oberflächennah."],
  aesche:["Schlanke Salmonidenart mit großer Rückenflosse.","In schnell fließenden, klaren Flüssen über Kiesgrund."],
  huchen:["Größter Raubfisch unter den Salmoniden, typisch für die Donau.","In tiefen Gumpen und Kolken kräftig strömender Donauzuflüsse."],
  barbe:["Strömungsliebender Grundfisch mit Barteln.","Über Kiesbänken und in Strömungsrinnen größerer Flüsse."],
@@ -232,7 +209,7 @@ const panel = document.getElementById("panel");
 
 const G_ICON = '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>';
 function authBar(){
-  if(!sb) return `<div class="note">Supabase ist nicht verbunden. Trage <code>SUPABASE_URL</code> und <code>SUPABASE_ANON_KEY</code> im Code ein.</div>`;
+  if(!sb) return `<div class="note">Supabase ist nicht verbunden. Trage <code>SUPABASE_URL</code> und <code>SUPABASE_ANON_KEY</code> ein.</div>`;
   if(user) return `<div class="bar row"><span class="mut">${esc(user.email||"Angemeldet")}</span><button class="ghost" id="logout">Abmelden</button></div>`;
   return `<div class="bar"><button class="g" id="google">${G_ICON}Mit Google anmelden</button><div class="or">oder mit E-Mail</div>
     <form id="authForm" style="margin:0">
@@ -542,17 +519,8 @@ if(GMAPS_KEY){
 } else document.getElementById("map").innerHTML='<p class="mut" style="padding:24px">Karte erscheint, sobald ein Google-Maps-Key eingetragen ist.</p>';
 
 if(sb){
-  sb.auth.onAuthStateChange(async (_e,session)=>{
-    user=session?session.user:null; 
-    if(user) await loadCloudFavs();
-    if(!picking) render();
-  });
-  sb.auth.getSession().then(async({data})=>{
-    user=data.session?data.session.user:null; 
-    if(user) await loadCloudFavs();
-    await loadLakes(); 
-    render();
-  });
+  sb.auth.onAuthStateChange((_e,session)=>{user=session?session.user:null; if(!picking) render()});
+  sb.auth.getSession().then(async({data})=>{user=data.session?data.session.user:null; await loadLakes(); render()});
 } else home();
 </script>
 </body>
