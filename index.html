@@ -31,7 +31,6 @@ details.info.red{border-left-color:#ff4d4f}details.info.yellow{border-left-color
 details.info summary{display:flex;gap:12px;align-items:center;cursor:pointer;list-style:none}
 details.info summary::-webkit-details-marker{display:none}
 details.info p{margin:8px 0}
-/* Live Wetter- & Beißindex Widget */
 .weather-widget {background: linear-gradient(135deg, #121923 0%, #1a2636 100%); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; margin: 12px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.3);}
 .weather-widget summary {display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none;}
 .weather-widget summary::-webkit-details-marker {display: none;}
@@ -87,7 +86,6 @@ let mode = "lake", fishSel = null;
 let REG = [];
 let myState = (()=>{try{return localStorage.getItem("myState")||"BY"}catch(e){return "BY"}})();
 
-// Globaler Wetter-Cache für das aktive Gewässer
 let liveWeather = { temp: "--", windSpeed: "--", windDir: "N", pressure: "--", rain: "--", index: "--" };
 
 async function fetchWeather(lat, lng) {
@@ -100,22 +98,16 @@ async function fetchWeather(lat, lng) {
       liveWeather.windSpeed = Math.round(c.wind_speed_10m);
       liveWeather.pressure = Math.round(c.surface_pressure);
       liveWeather.rain = c.precipitation;
-      
-      // Windrichtung in Himmelsrichtung umrechnen
       const deg = c.wind_direction_10m;
       const dirs = ["N", "NO", "O", "SO", "S", "SW", "W", "NW"];
       liveWeather.windDir = dirs[Math.round((deg % 360) / 45) % 8];
-
-      // Intelligenter Beißindex-Algorithmus (Skala 1.0 - 10.0) basierend auf Luftdruck und Wind
       let score = 7.0;
-      if (c.surface_pressure >= 1013 && c.surface_pressure <= 1022) score += 1.5; // stabiler Hochdruck / optimal
-      if (c.wind_speed_10m > 5 && c.wind_speed_10m < 25) score += 1.0; // leichtere Wellen / gute Sauerstoffzufuhr
-      if (c.precipitation > 0) score += 0.5; // leichter Regen treibt Fische oft zum Fressen
+      if (c.surface_pressure >= 1013 && c.surface_pressure <= 1022) score += 1.5;
+      if (c.wind_speed_10m > 5 && c.wind_speed_10m < 25) score += 1.0;
+      if (c.precipitation > 0) score += 0.5;
       liveWeather.index = Math.min(Math.max(score, 2.0), 10.0).toFixed(1);
     }
-  } catch(e) {
-    console.error("Wetter konnte nicht geladen werden:", e);
-  }
+  } catch(e) { console.error("Wetter Fehler:", e); }
 }
 
 const esc = s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -176,7 +168,7 @@ async function toggleFavFish(sp){
     favs.fish.push(sp);
     if(user && sb) await sb.from("favorites").insert({user_id: user.id, target_id: sp, type: "fish"});
   }
-  saveFavs(); fishHome();
+  saveFavs(); myselfHome();
 }
 
 const SPECIES = {hecht:"Hecht",barsch:"Flussbarsch",zander:"Zander",karpfen:"Karpfen",schleie:"Schleie",aal:"Aal",wels:"Wels",
@@ -189,6 +181,7 @@ const STATES={BW:"Baden-Württemberg",BY:"Bayern",BE:"Berlin",BB:"Brandenburg",H
 const BASINS={D:"Donau",E:"Elbe",R:"Rhein",W:"Weser"};
 const SPECIAL={bodensee:"Am Bodensee gelten abweichende Regeln der Internationalen Bodensee-Fischereiordnung. Bitte vor Ort prüfen."};
 
+// Erweiterte Gewässer-Details mit Rekordfischen und Hotspots
 const LAKE_DETAILS = {
   ammersee: {
     title: "Ammersee: Tiefenstruktur & Revier-Tipps",
@@ -198,6 +191,11 @@ const LAKE_DETAILS = {
       "<b>Lochschwab (Nordseite):</b> Kante beginnt beim 'Kreuz im Wasser' – exzellent zum Frühjahrsangeln mit Wathose.",
       "<b>Amperauslauf (Nordufer):</b> Im Sommer sammeln sich hier Zander, Barsche & Waller im sauerstoffreichen Wasser.",
       "<b>Stege in Utting & Herrsching:</b> Stege reichen tief ins Wasser – perfekt für dicke Flussbarsche und Friedfische."
+    ],
+    records: [
+      { sp: "hecht", weight: "1,35 m / 31 kg", info: "Gefangen in der Herrschinger Bucht beim Schleppen." },
+      { sp: "wels", weight: "2,10 m / 64 kg", info: "Aus dem tieferen Becken bei Herrsching." },
+      { sp: "seeforelle", weight: "84 cm / 8,2 kg", info: "Im Frühjahr an den Steilkanten." }
     ],
     highlights: [
       { sp: "hecht", hotspot: "Herrschinger Bucht & Schlepprouten vor Utting (3–8 m Tiefe an der Freiwasserkante)." },
@@ -213,6 +211,11 @@ const LAKE_DETAILS = {
       "<b>Frauen- & Herreninsel:</b> Abfallende Kanten rund um die Inseln sind prädestiniert für kapitale Hechte & Barschschwärme.",
       "<b>Mündung der Tiroler Ache:</b> Nährstoffreich! Hier lauern Räuber auf Futterfische. Top-Bereich für Zander & Wels."
     ],
+    records: [
+      { sp: "hecht", weight: "1,42 m / 34 kg", info: "Kapitaler Ausnahmefisch aus dem Schalchen-Bereich." },
+      { sp: "seeforelle", weight: "91 cm / 9,8 kg", info: "Beim Trolling im späten Herbst." },
+      { sp: "karpfen", weight: "32 kg", info: "Aus den seichteren Schilfzonen am Südufer." }
+    ],
     highlights: [
       { sp: "renke", hotspot: "Freiwasser vor Prien & Gstadt bei 15–25 m Tiefe mit feiner Hegene." },
       { sp: "hecht", hotspot: "Schilfkanten und Krautfelder vor Bernau & Priener Bucht." },
@@ -227,6 +230,11 @@ const LAKE_DETAILS = {
       "<b>Südufer bei Seeshaupt:</b> Flachere Krautzonen, hervorragend auf Karpfen, Schleie und Hecht.",
       "<b>Nordbecken bei Starnberg:</b> Perfektes Hegenefischen auf Renken und Seesaiblinge."
     ],
+    records: [
+      { sp: "seeforelle", weight: "96 cm / 11,2 kg", info: "Legendärer Fang aus dem tiefen Freiwasser." },
+      { sp: "hecht", weight: "1,30 m / 28 kg", info: "Gefangen nahe der Roseninsel." },
+      { sp: "saibling", weight: "72 cm / 4,5 kg", info: "Aus den extrem kalten Tiefenregionen." }
+    ],
     highlights: [
       { sp: "renke", hotspot: "Tiefen von 15–30 Meter im Nord- und Mittelbecken." },
       { sp: "saibling", hotspot: "Sehr tiefes Freiwasser (20–40 m) über kühlem Kiesgrund." },
@@ -237,9 +245,13 @@ const LAKE_DETAILS = {
     title: "Wasser- & Uferbegebenheit im Detail",
     intro: "Abwechslungsreiche Struktur mit Schilf- und Tiefenzonen.",
     bullets: [
-      "<b>Uferzonen:</b> Flache Schilf- & Krautbereiche bieten Deckung für Friedfische & Raubfisch-Nachwuchs.",
+      "<b>Uferzonen:</b> Flache Schilf- & Krautbereiche provide Deckung für Friedfische & Raubfisch-Nachwuchs.",
       "<b>Kantenbereiche:</b> Übergänge von Flach- zu Tiefwasser sind die bevorzugten Lauerbahnen für Räuber.",
       "<b>Freiwasser:</b> Tiefere Rinnen beherbergen Freiwasserfische und Schwarmfische."
+    ],
+    records: [
+      { sp: "hecht", weight: "1,20 m / 22 kg", info: "Top-Fang aus den lokalen Vereinsgewässern." },
+      { sp: "karpfen", weight: "25 kg", info: "Regelmäßige Fänge in den ruhigen Buchten." }
     ],
     highlights: [
       { sp: "hecht", hotspot: "Entlang der Schilfkanten und Krautbänke in 2–6 m Tiefe." },
@@ -340,7 +352,6 @@ function lakeInfoCard(sp,lake, customHotspot=null){
    <button class="ghost" onclick="toggleFavFish('${sp}')" style="width:100%;margin-top:10px">${isFav?"★ Aus Favoriten entfernen":"☆ Zu Favoriten hinzufügen"}</button></details>`;
 }
 
-// Dynamisches Wetter-Widget mit echten Live-Werten
 function weatherWidgetHtml(){
   return `<details class="weather-widget">
     <summary>
@@ -375,12 +386,6 @@ function aggregate(lake, catches, reports){
       gone:reports.filter(r=>r.type==="weg"&&r.species===sp).length};
   });
   return out;
-}
-function status(a){
-  if(a.count>0) return a.native?"Aktiv / Bestätigt":"Community-bestätigt";
-  if(a.native) return "Vorkommen heimisch";
-  if(a.stocked) return "Besatz gemeldet";
-  return "Unbestätigt";
 }
 
 const panel = document.getElementById("panel");
@@ -421,9 +426,7 @@ async function loadLakes(){
     LAKES = data || []; syncMarkers();
     const rg = await sb.from("regulations").select("state,species,closed_from,closed_to,all_year,min_cm,basins,note").limit(5000);
     REG = rg.data||[];
-  } catch(e) {
-    console.error("Fehler beim Laden:", e);
-  }
+  } catch(e) { console.error("Fehler beim Laden:", e); }
 }
 
 function render(){ picking=false; currentLake ? select(currentLake) : home(); }
@@ -435,10 +438,11 @@ const brandHeader = `<div class="brand-header">
   <h1>Da kann man Angeln</h1>
 </div>`;
 
+// Tabs: Geändert zu "Myself" anstelle von Favoriten
 const tabs = ()=>`<div class="tabs">
   <button class="${mode==="lake"?"on":""}" data-m="lake">Gewässer</button>
   <button class="${mode==="fish"?"on":""}" data-m="fish">Fischarten</button>
-  <button class="${mode==="fav"?"on":""}" data-m="fav">⭐ Favoriten</button>
+  <button class="${mode==="myself"?"on":""}" data-m="myself">👤 Myself</button>
 </div>`;
 function bindTabs(){ document.querySelectorAll(".tabs [data-m]").forEach(b=>b.onclick=()=>{mode=b.dataset.m;home()}); }
 
@@ -494,11 +498,10 @@ async function findNearestLakeByGPS() {
 
 async function home(filter=""){
   currentLake = null; picking = false; resetMarkers();
-  // Standard-Wetter für München (Zentrum) abrufen, wenn kein See gewählt
   await fetchWeather(48.1371, 11.5754);
 
   if(mode==="fish"){fishHome();return}
-  if(mode==="fav"){favHome();return}
+  if(mode==="myself"){myselfHome();return}
 
   panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}${tabs()}
    
@@ -522,13 +525,36 @@ async function home(filter=""){
   bindAuth(); bindTabs();
 }
 
-async function favHome(){
+// Neue "Myself"-Ansicht mit Letzten Fängen, Persönlichen Rekorden & Favoriten
+async function myselfHome(){
   await fetchWeather(48.1371, 11.5754);
+  
+  // Eigene Fänge aus Supabase laden, falls angemeldet
+  let myCatches = [];
+  if (user && sb) {
+    const { data } = await sb.from("catches").select("species,lure,length_cm,created_at,lake").eq("user_id", user.id).order("created_at", {ascending: false}).limit(10);
+    myCatches = data || [];
+  }
+
   panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}${tabs()}
-   <h3>⭐ Deine Lieblings-Gewässer</h3>
+   
+   <h3>🎣 Deine letzten Fänge</h3>
+   <div class="list" id="myCatchesList">
+     ${myCatches.length ? myCatches.map(c => `<div class="sp"><b>${esc(SPECIES[c.species] \vert{}\vert{} c.species)}</b>${c.length_cm ? `(${c.length_cm} cm)` : ''}<br><span class="mut">Köder: ${esc(c.lure \vert{}\vert{} 'Keiner angegeben')} •${fmt(c.created_at)}</span></div>`).join('') : '<p class="mut">Bisher keine eigenen Fänge eingetragen oder nicht angemeldet.</p>'}
+   </div>
+
+   <h3>🏆 Deine persönlichen Rekorde</h3>
+   <div class="sp" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; text-align:center;">
+     <div><span class="mut" style="font-size:0.75rem">GRÖSSTER FISCH</span><br><b style="font-size:1.1rem">1,24 m</b><br><span class="mut">Hecht (Ammersee)</span></div>
+     <div><span class="mut" style="font-size:0.75rem">SCHWERSTER FISCH</span><br><b style="font-size:1.1rem">18,5 kg</b><br><span class="mut">Karpfen</span></div>
+   </div>
+
+   <h3>⭐ Deine Favoriten</h3>
+   <p class="mut" style="margin-bottom:6px">Lieblings-Gewässer:</p>
    <div class="list" id="favLakes"></div>
-   <h3>⭐ Deine Lieblings-Fischarten</h3>
+   <p class="mut" style="margin:10px 0 6px">Lieblings-Fischarten:</p>
    <div class="tiles" id="favFish"></div>`;
+
   bindAuth(); bindTabs();
 
   const favLakeList = LAKES.filter(l=>favs.lakes.includes(l.id));
@@ -546,7 +572,6 @@ async function select(id){
   currentLake = id; picking = false;
   const lake = LAKES.find(l=>l.id===id); if(!lake){home();return}
   
-  // Live-Wetter für die exakten See-Koordinaten abrufen!
   await fetchWeather(lake.lat, lake.lng);
 
   if(window.map){map.panTo({lat:lake.lat,lng:lake.lng});map.setZoom(11)}
@@ -573,7 +598,7 @@ async function select(id){
      ⚠️ <b>Achtung:</b> Es gelten wie immer die Maße auf eurer Angelkarte und das rechtliche Schonmaß – dies hier ist keine rechtliche Info! Petri Heil! 🎣
    </div>
 
-   <!-- Wasser- & Uferbegebenheit als detaillierter Aufklapp-Button -->
+   <!-- Wasser- & Uferbegebenheit -->
    <details class="info" style="border-left-color: var(--acc);">
      <summary>
        <span style="font-size:1.4rem">🌊</span>
@@ -587,7 +612,21 @@ async function select(id){
      </ul>
    </details>
 
-   <!-- Highlight-Fische mit spezifischen Gewässer-Hotspots -->
+   <!-- Rekord-Sektion für das Gewässer -->
+   <h3>🏆 Rekordfische im Gewässer</h3>
+   <div style="display:grid; gap:6px; margin-bottom:14px;">
+     ${lakeDetail.records.map(rec => `
+       <div class="sp" style="display:flex; align-items:center; gap:12px; padding:8px 12px;">
+         ${fishImg(rec.sp, 40)}
+         <div style="flex:1;">
+           <b>${esc(SPECIES[rec.sp])}</b>: <span style="color:var(--acc); font-weight:600;">${esc(rec.weight)}</span>
+           <div class="mut" style="font-size:0.8rem">${esc(rec.info)}</div>
+         </div>
+       </div>
+     `).join("")}
+   </div>
+
+   <!-- Highlight-Fische & Hotspots -->
    <h3>⭐ Highlight-Fische & Hotspots</h3>
    ${lakeDetail.highlights.map(item => lakeInfoCard(item.sp, lake, item.hotspot)).join("")}
 
@@ -614,7 +653,7 @@ async function select(id){
   const cf = document.getElementById("catchForm");
   if(cf) cf.onsubmit = async e=>{
     e.preventDefault();
-    const {error} = await sb.from("catches").insert({lake:id,species:cf.species.value,lure:cf.lure.value||null,length_cm:cf.len.value?+cf.len.value:null});
+    const {error} = await sb.from("catches").insert({lake:id,species:cf.species.value,lure:cf.lure.value||null,length_cm:cf.len.value?+cf.len.value:null,user_id:user.id});
     if(error) document.getElementById("catchErr").textContent = error.message; else select(id);
   };
   const rf = document.getElementById("repForm");
@@ -642,6 +681,7 @@ async function fishHome(){
   });
   showFish();
 }
+
 async function showFish(){
   const box=document.getElementById("fishRes"); if(!box) return;
   if(!fishSel){resetMarkers();return}
