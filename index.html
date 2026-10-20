@@ -31,6 +31,13 @@ details.info.red{border-left-color:#ff4d4f}details.info.yellow{border-left-color
 details.info summary{display:flex;gap:12px;align-items:center;cursor:pointer;list-style:none}
 details.info summary::-webkit-details-marker{display:none}
 details.info p{margin:8px 0}
+/* Live Wetter- & Beißindex Widget */
+.weather-widget {background: linear-gradient(135deg, #121923 0%, #1a2636 100%); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; margin: 12px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.3);}
+.weather-widget summary {display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none;}
+.weather-widget summary::-webkit-details-marker {display: none;}
+.ww-compact {display: flex; align-items: center; gap: 14px; width: 100%; font-size: 0.9rem;}
+.ww-details {margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem; color: var(--mut);}
+.ww-details b {color: var(--ink);}
 .foot{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);text-align:center;font-size:.78rem;letter-spacing:.04em;color:var(--mut)}
 .foot b{color:var(--acc);font-weight:700}
 h1{font-size:1.45rem;margin:0;letter-spacing:-.02em}h2{font-size:1.3rem;margin:0 0 4px;letter-spacing:-.01em}h3{font-size:.95rem;margin:22px 0 8px}
@@ -79,6 +86,37 @@ const markers = {};
 let mode = "lake", fishSel = null;
 let REG = [];
 let myState = (()=>{try{return localStorage.getItem("myState")||"BY"}catch(e){return "BY"}})();
+
+// Globaler Wetter-Cache für das aktive Gewässer
+let liveWeather = { temp: "--", windSpeed: "--", windDir: "N", pressure: "--", rain: "--", index: "--" };
+
+async function fetchWeather(lat, lng) {
+  try {
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,surface_pressure,precipitation,wind_speed_10m,wind_direction_10m`);
+    const data = await res.json();
+    if(data && data.current) {
+      const c = data.current;
+      liveWeather.temp = Math.round(c.temperature_2m);
+      liveWeather.windSpeed = Math.round(c.wind_speed_10m);
+      liveWeather.pressure = Math.round(c.surface_pressure);
+      liveWeather.rain = c.precipitation;
+      
+      // Windrichtung in Himmelsrichtung umrechnen
+      const deg = c.wind_direction_10m;
+      const dirs = ["N", "NO", "O", "SO", "S", "SW", "W", "NW"];
+      liveWeather.windDir = dirs[Math.round((deg % 360) / 45) % 8];
+
+      // Intelligenter Beißindex-Algorithmus (Skala 1.0 - 10.0) basierend auf Luftdruck und Wind
+      let score = 7.0;
+      if (c.surface_pressure >= 1013 && c.surface_pressure <= 1022) score += 1.5; // stabiler Hochdruck / optimal
+      if (c.wind_speed_10m > 5 && c.wind_speed_10m < 25) score += 1.0; // leichtere Wellen / gute Sauerstoffzufuhr
+      if (c.precipitation > 0) score += 0.5; // leichter Regen treibt Fische oft zum Fressen
+      liveWeather.index = Math.min(Math.max(score, 2.0), 10.0).toFixed(1);
+    }
+  } catch(e) {
+    console.error("Wetter konnte nicht geladen werden:", e);
+  }
+}
 
 const esc = s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt = iso=>new Date(iso).toLocaleDateString("de-DE");
@@ -302,6 +340,26 @@ function lakeInfoCard(sp,lake, customHotspot=null){
    <button class="ghost" onclick="toggleFavFish('${sp}')" style="width:100%;margin-top:10px">${isFav?"★ Aus Favoriten entfernen":"☆ Zu Favoriten hinzufügen"}</button></details>`;
 }
 
+// Dynamisches Wetter-Widget mit echten Live-Werten
+function weatherWidgetHtml(){
+  return `<details class="weather-widget">
+    <summary>
+      <div class="ww-compact">
+        <span>🎣 Beißindex: <b style="color:var(--acc)">${liveWeather.index} / 10</b></span>
+        <span>🌡️ <b>${liveWeather.temp}°C</b></span>
+        <span>💨 <b>${liveWeather.windDir} ${liveWeather.windSpeed} km/h</b></span>
+      </div>
+      <span class="mut" style="font-size:0.8rem">▼</span>
+    </summary>
+    <div class="ww-details">
+      <div>Luftdruck: <b>${liveWeather.pressure} hPa</b></div>
+      <div>Regen: <b>${liveWeather.rain} mm/h</b></div>
+      <div>Windrichtung: <b>${liveWeather.windDir}</b></div>
+      <div>Datenquelle: <b>Live (Open-Meteo)</b></div>
+    </div>
+  </details>`;
+}
+
 function aggregate(lake, catches, reports){
   const out = {}, ids = new Set(lake.base);
   catches.forEach(c=>ids.add(c.species));
@@ -384,17 +442,18 @@ const tabs = ()=>`<div class="tabs">
 </div>`;
 function bindTabs(){ document.querySelectorAll(".tabs [data-m]").forEach(b=>b.onclick=()=>{mode=b.dataset.m;home()}); }
 
-function findNearestLakeByGPS() {
+async function findNearestLakeByGPS() {
   if (!navigator.geolocation) {
     alert("Dein Browser unterstützt keine Geolocation.");
     return;
   }
-  panel.innerHTML = `${brandHeader}<p class="mut">Ermittle deinen GPS-Standort...</p>`;
+  panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}<p class="mut">Ermittle deinen GPS-Standort...</p>`;
 
   navigator.geolocation.getCurrentPosition(
-    position => {
+    async position => {
       const userLat = position.coords.latitude;
       const userLng = position.coords.longitude;
+      await fetchWeather(userLat, userLng);
 
       if (!LAKES.length) {
         alert("Keine Gewässer geladen.");
@@ -420,7 +479,7 @@ function findNearestLakeByGPS() {
           map.setZoom(13);
         }
       } else {
-        panel.innerHTML = `${brandHeader}
+        panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}
          <p class="mut" style="color:var(--warn); margin:12px 0;">Kein Gewässer in deiner unmittelbaren Nähe gefunden.</p>
          <button class="ghost" onclick="home()">Zurück zur Übersicht</button>`;
       }
@@ -433,13 +492,15 @@ function findNearestLakeByGPS() {
   );
 }
 
-function home(filter=""){
+async function home(filter=""){
   currentLake = null; picking = false; resetMarkers();
+  // Standard-Wetter für München (Zentrum) abrufen, wenn kein See gewählt
+  await fetchWeather(48.1371, 11.5754);
+
   if(mode==="fish"){fishHome();return}
   if(mode==="fav"){favHome();return}
 
-  // Hier die exakte Reihenfolge: Erst Logo, dann Account/Auth, dann Tabs & der Rest
-  panel.innerHTML = `${brandHeader}${authBar()}${tabs()}
+  panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}${tabs()}
    
    <button onclick="findNearestLakeByGPS()" style="width:100%;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;">
      📍 Am Gewässer? GPS-Standort erkennen
@@ -461,8 +522,9 @@ function home(filter=""){
   bindAuth(); bindTabs();
 }
 
-function favHome(){
-  panel.innerHTML = `${brandHeader}${authBar()}${tabs()}
+async function favHome(){
+  await fetchWeather(48.1371, 11.5754);
+  panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}${tabs()}
    <h3>⭐ Deine Lieblings-Gewässer</h3>
    <div class="list" id="favLakes"></div>
    <h3>⭐ Deine Lieblings-Fischarten</h3>
@@ -483,6 +545,10 @@ function favHome(){
 async function select(id){
   currentLake = id; picking = false;
   const lake = LAKES.find(l=>l.id===id); if(!lake){home();return}
+  
+  // Live-Wetter für die exakten See-Koordinaten abrufen!
+  await fetchWeather(lake.lat, lake.lng);
+
   if(window.map){map.panTo({lat:lake.lat,lng:lake.lng});map.setZoom(11)}
   const [c,r] = await Promise.all([
     sb.from("catches").select("species,lure,created_at").eq("lake",id).limit(5000),
@@ -496,7 +562,7 @@ async function select(id){
 
   const lakeDetail = LAKE_DETAILS[id] || LAKE_DETAILS.default;
 
-  panel.innerHTML = `${brandHeader}${authBar()}<button class="ghost" id="back" style="margin-bottom:14px">Zurück zur Übersicht</button>
+  panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}<button class="ghost" id="back" style="margin-bottom:14px">Zurück zur Übersicht</button>
    <h2>${esc(lake.name)}</h2>
    <p class="mut">${TYPES[lake.type]||""}${lake.state?`, ${esc(STATES[lake.state]||"")}`:""}, ${catches.length} gemeldete Fänge, ${rows.length} Fischarten</p>
    
@@ -559,8 +625,9 @@ async function select(id){
   };
 }
 
-function fishHome(){
-  panel.innerHTML = `${brandHeader}${authBar()}${tabs()}
+async function fishHome(){
+  await fetchWeather(48.1371, 11.5754);
+  panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}${tabs()}
    <p class="mut">Worauf hast du heute Lust? Tippe auf eine Fischart.</p>
    <label class="mut" for="stSel">Dein Bundesland</label>
    <select id="stSel" style="width:100%;margin:4px 0 8px">${Object.entries(STATES).map(([k,v])=>`<option value="${k}"${k===myState?" selected":""}>${v}${REG.some(r=>r.state===k)?"":" (noch keine Daten)"}</option>`).join("")}</select>
@@ -604,9 +671,10 @@ async function showFish(){
   box.querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id));
 }
 
-function showAdd(){
+async function showAdd(){
   currentLake = null; picking = true; picked = null;
-  panel.innerHTML = `${brandHeader}${authBar()}<button class="ghost" id="cancel" style="margin-bottom:14px">Abbrechen</button>
+  await fetchWeather(48.1371, 11.5754);
+  panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}<button class="ghost" id="cancel" style="margin-bottom:14px">Abbrechen</button>
    <h2>Neues Gewässer</h2>
    <p class="mut">Klicke auf die Karte, um die Position zu setzen, oder nutze deinen Standort.</p>
    <form id="addForm">
