@@ -13,7 +13,7 @@ body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif
 aside{background:var(--pan);border-left:1px solid var(--line);overflow:auto;padding:22px;display:flex;flex-direction:column}
 #panel{flex:1}
 .brand-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.brand-header img{width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid var(--acc);flex-shrink:0}
+.brand-logo{width:42px;height:42px;border-radius:50%;border:2px solid var(--acc);flex-shrink:0;background:#0d1117;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--card);padding:4px;border-radius:10px;margin:14px 0}
 .tabs button{background:transparent;color:var(--mut);padding:7px;font-size:0.85rem}.tabs button.on{background:var(--acc);color:#04101d}
 .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
@@ -152,8 +152,9 @@ const SPECIAL={bodensee:"Am Bodensee gelten abweichende Regeln der International
 
 const LAKE_DETAILS = {
   default: {
-    structure: "Abwechslungsreiche Uferzonen mit flachen Schilfgürteln, vereinzelt Totholz und tieferen Rinnen im Mittelwasser.",
-    highlights: ["hecht", "barsch", "karpfen"]
+    title: "Wasser- & Uferbegebenheit im Detail",
+    intro: "Flache Schilfgürtel im Nordende, steinige Packungen und abfallende Kanten im tieferen Bereich.",
+    details: "Das Gewässer bietet eine abwechslungsreiche Struktur. Im nördlichen Flachwasserbereich finden sich ausgedehnte Krautfelder und Schilfgürtel – ideal für Raubfische wie Hecht und Friedfische im Frühjahr. Nach Süden hin fällt das Ufer kontinuierlich ab und bietet mit harten Kanten und Totholz exzellente Unterstände für Barsch und Zander."
   }
 };
 
@@ -181,7 +182,7 @@ const INFO={
  graskarpfen:["Pflanzenfressender, eingebürgerter Karpfenfisch.","In verkrauteten, warmen Gewässern, oft nahe der Oberfläche."],
  quappe:["Einziger Dorschartiger im Süßwasser, nachtaktiv.","In kühlem Wasser an Steinen und in Tiefenzonen, im Winter besonders aktiv."],
  kaulbarsch:["Kleiner, barschartiger Grundfisch.","Über sandigem und kiesigem Grund in Seen und Flüssen."]};
-const FS={hecht:[ "#6f9a5a","o","l"],barsch:["#9bb04a","b","m"],zander:["#8a9a78","b","l"],karpfen:["#c9a24a","","d"],schleie:["#6b8f4e","","m"],aal:[ "#7a7f58","","e"],wels:["#5a6358","w","l"],rotauge:["#c0ccd6","r","m"],brachse:["#b8b08a","","d"],rotfeder:[ "#d6a642","r","m"],renke:["#c7d3dc","","m"],seeforelle:["#a9b6b0","o","l"],saibling:["#7f8f9a","r","m"],bachforelle:["#a58a4e","o","m"],regenbogen:[ "#aab6c0","p","m"],aesche:["#8f9aa8","f","l"],huchen:["#a56a52","","l"],barbe:[ "#9a8a58","w","l"],doebel:["#8e9a8a","","m"],rapfen:["#aeb8c0","","l"],graskarpfen:[ "#8a9a5a","","l"],quappe:["#7a6a4a","w","l"],kaulbarsch:[ "#9a8f5a","o","m"]};
+const FS={hecht:["#6f9a5a","o","l"],barsch:["#9bb04a","b","m"],zander:["#8a9a78","b","l"],karpfen:["#c9a24a","","d"],schleie:["#6b8f4e","","m"],aal:["#7a7f58","","e"],wels:["#5a6358","w","l"],rotauge:["#c0ccd6","r","m"],brachse:["#b8b08a","","d"],rotfeder:["#d6a642","r","m"],renke:["#c7d3dc","","m"],seeforelle:["#a9b6b0","o","l"],saibling:["#7f8f9a","r","m"],bachforelle:["#a58a4e","o","m"],regenbogen:["#aab6c0","p","m"],aesche:["#8f9aa8","f","l"],huchen:["#a56a52","","l"],barbe:["#9a8a58","w","l"],doebel:["#8e9a8a","","m"],rapfen:["#aeb8c0","","l"],graskarpfen:["#8a9a5a","","l"],quappe:["#7a6a4a","w","l"],kaulbarsch:["#9a8f5a","o","m"]};
 function fishSvg(id){
   const [c,f,sh]=FS[id]||["#8aa0b0","","m"], ry={l:6,m:9,d:12,e:4}[sh], rx={l:25,m:22,d:20,e:27}[sh];
   let x=`<ellipse cx="32" cy="16" rx="${rx}" ry="${ry}" fill="${c}"/><path d="M${32+rx-3} 16 L62 6 L62 26 Z" fill="${c}"/><path d="M26 ${16-ry} Q32 ${16-ry-7} 40 ${16-ry}Z" fill="${c}" opacity=".8"/><circle cx="15" cy="14" r="2" fill="#0b1118"/><circle cx="15.6" cy="13.4" r=".7" fill="#fff"/>`;
@@ -316,7 +317,15 @@ async function loadLakes(){
 function render(){ picking=false; currentLake ? select(currentLake) : home(); }
 
 const brandHeader = `<div class="brand-header">
-  <img src="PHOTO-2026-10-20-08-33-55.jpg" alt="Logo" onerror="this.onerror=null; this.src='logo.jpg'">
+  <div class="brand-logo">
+    <svg viewBox="0 0 100 100" width="100%" height="100%">
+      <circle cx="50" cy="50" r="48" fill="#121923" stroke="#3b9cff" stroke-width="4"/>
+      <path d="M 25 50 Q 50 22 75 50 Q 50 78 25 50 Z" fill="#3b9cff" opacity="0.85"/>
+      <circle cx="65" cy="42" r="5" fill="#07090d"/>
+      <path d="M 18 64 Q 50 82 82 64" stroke="#ffc53d" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <path d="M 50 16 L 50 36 M 44 36 L 56 36" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+  </div>
   <h1>Da kann man Angeln</h1>
 </div>`;
 
@@ -437,7 +446,6 @@ async function select(id){
   const isFav = favs.lakes.includes(id);
 
   const lakeDetail = LAKE_DETAILS[id] || LAKE_DETAILS.default;
-  const highlightSpeciesNames = lakeDetail.highlights.map(spKey => SPECIES[spKey] || spKey).join(", ");
 
   panel.innerHTML = `${authBar()}<button class="ghost" id="back">Zurück zur Übersicht</button>
    <h2 style="margin-top:14px">${esc(lake.name)}</h2>
@@ -445,21 +453,26 @@ async function select(id){
    
    <button class="ghost" onclick="toggleFavLake('${id}')" style="width:100%;margin:10px 0">${isFav?"⭐ Aus Favoriten entfernen":"☆ Zu Favoriten hinzufügen"}</button>
 
-   <!-- Wichtiger Hinweis direkt oben platziert -->
-   <div class="note" style="background:#182232; border-left:4px solid var(--acc); margin-top:12px;">
-     ⚠️ <b>Wichtiger Hinweis:</b> Die hier angezeigten Schonzeiten und Mindestmaße dienen nur als Orientierung und haben <b>keine rechtliche Grundlage</b>. Bitte schaue vor jedem Angeln unbedingt auf deine <b>Angelkarte / Erlaubniskarte</b> des jeweiligen Gewässers oder Vereins, da dort die verbindlichen Regeln stehen. Denke auch daran, dir rechtzeitig eine gültige Angelkarte zu kaufen! Petri Heil! 🎣
+   <!-- Kurzer, prägnanter Warnhinweis direkt oben -->
+   <div class="note" style="background:#182232; border-left:4px solid var(--warn); margin-top:12px;">
+     ⚠️ <b>Achtung:</b> Es gelten wie immer die Maße auf eurer Angelkarte und das rechtliche Schonmaß – dies hier ist keine rechtliche Info! Petri Heil! 🎣
    </div>
 
-   <!-- Kurze Info über die See-Begebenheit -->
-   <div class="note" style="background:var(--card);border:1px solid var(--line);">
-     🌊 <b>Wasser- & Uferbegebenheit:</b><br>
-     ${esc(lakeDetail.structure)}
-   </div>
+   <!-- Wasser- & Uferbegebenheit als aufklappbares Feld -->
+   <details class="info" style="border-left-color: var(--acc);">
+     <summary>
+       <span style="font-size:1.4rem">🌊</span>
+       <div>
+         <b>${esc(lakeDetail.title)}</b>
+         <div class="mut">${esc(lakeDetail.intro)}</div>
+       </div>
+     </summary>
+     <p style="margin-top:10px">${esc(lakeDetail.details)}</p>
+   </details>
 
-   <!-- Highlight-Fische -->
-   <div class="note">
-     ⭐ <b>Highlight-Fisch(e):</b> ${esc(highlightSpeciesNames)} – besonders stark vertreten oder dafür bekannt.
-   </div>
+   <!-- Highlight-Fische als vollwertige Aufklapp-Karten -->
+   <h3>⭐ Highlight-Fische</h3>
+   ${lakeDetail.highlights.map(spKey => lakeInfoCard(spKey, lake)).join("")}
 
    ${loadErr?`<p class="err">Daten konnten nicht geladen werden: ${esc(loadErr)}</p>`:""}
    ${SPECIAL[lake.id]?`<div class="note">${esc(SPECIAL[lake.id])}</div>`:""}
