@@ -151,7 +151,6 @@ const STATES={BW:"Baden-Württemberg",BY:"Bayern",BE:"Berlin",BB:"Brandenburg",H
 const BASINS={D:"Donau",E:"Elbe",R:"Rhein",W:"Weser"};
 const SPECIAL={bodensee:"Am Bodensee gelten abweichende Regeln der Internationalen Bodensee-Fischereiordnung. Bitte vor Ort prüfen."};
 
-// Spezifische Hotspots für Highlight-Fische je Gewässer
 const LAKE_DETAILS = {
   ammersee: {
     title: "Ammersee: Tiefenstruktur & Revier-Tipps",
@@ -439,7 +438,8 @@ function home(filter=""){
   if(mode==="fish"){fishHome();return}
   if(mode==="fav"){favHome();return}
 
-  panel.innerHTML = `${authBar()}${brandHeader}${tabs()}
+  // Hier die exakte Reihenfolge: Erst Logo, dann Account/Auth, dann Tabs & der Rest
+  panel.innerHTML = `${brandHeader}${authBar()}${tabs()}
    
    <button onclick="findNearestLakeByGPS()" style="width:100%;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;">
      📍 Am Gewässer? GPS-Standort erkennen
@@ -462,7 +462,7 @@ function home(filter=""){
 }
 
 function favHome(){
-  panel.innerHTML = `${authBar()}${brandHeader}${tabs()}
+  panel.innerHTML = `${brandHeader}${authBar()}${tabs()}
    <h3>⭐ Deine Lieblings-Gewässer</h3>
    <div class="list" id="favLakes"></div>
    <h3>⭐ Deine Lieblings-Fischarten</h3>
@@ -496,8 +496,8 @@ async function select(id){
 
   const lakeDetail = LAKE_DETAILS[id] || LAKE_DETAILS.default;
 
-  panel.innerHTML = `${authBar()}<button class="ghost" id="back">Zurück zur Übersicht</button>
-   <h2 style="margin-top:14px">${esc(lake.name)}</h2>
+  panel.innerHTML = `${brandHeader}${authBar()}<button class="ghost" id="back" style="margin-bottom:14px">Zurück zur Übersicht</button>
+   <h2>${esc(lake.name)}</h2>
    <p class="mut">${TYPES[lake.type]||""}${lake.state?`, ${esc(STATES[lake.state]||"")}`:""}, ${catches.length} gemeldete Fänge, ${rows.length} Fischarten</p>
    
    <button class="ghost" onclick="toggleFavLake('${id}')" style="width:100%;margin:10px 0">${isFav?"⭐ Aus Favoriten entfernen":"☆ Zu Favoriten hinzufügen"}</button>
@@ -560,7 +560,7 @@ async function select(id){
 }
 
 function fishHome(){
-  panel.innerHTML = `${authBar()}${brandHeader}${tabs()}
+  panel.innerHTML = `${brandHeader}${authBar()}${tabs()}
    <p class="mut">Worauf hast du heute Lust? Tippe auf eine Fischart.</p>
    <label class="mut" for="stSel">Dein Bundesland</label>
    <select id="stSel" style="width:100%;margin:4px 0 8px">${Object.entries(STATES).map(([k,v])=>`<option value="${k}"${k===myState?" selected":""}>${v}${REG.some(r=>r.state===k)?"":" (noch keine Daten)"}</option>`).join("")}</select>
@@ -606,8 +606,8 @@ async function showFish(){
 
 function showAdd(){
   currentLake = null; picking = true; picked = null;
-  panel.innerHTML = `${authBar()}<button class="ghost" id="cancel">Abbrechen</button>
-   <h2 style="margin-top:14px">Neues Gewässer</h2>
+  panel.innerHTML = `${brandHeader}${authBar()}<button class="ghost" id="cancel" style="margin-bottom:14px">Abbrechen</button>
+   <h2>Neues Gewässer</h2>
    <p class="mut">Klicke auf die Karte, um die Position zu setzen, oder nutze deinen Standort.</p>
    <form id="addForm">
      <input name="name" placeholder="Name, z. B. Kirchsee" required minlength="2" maxlength="80">
