@@ -12,6 +12,8 @@ body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif
 #map{height:100%;background:var(--bg)}
 aside{background:var(--pan);border-left:1px solid var(--line);overflow:auto;padding:22px;display:flex;flex-direction:column}
 #panel{flex:1}
+.brand-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.brand-header img{width:48px;height:48px;border-radius:50%;object-fit:cover;border:1px solid var(--acc)}
 .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--card);padding:4px;border-radius:10px;margin:14px 0}
 .tabs button{background:transparent;color:var(--mut);padding:7px;font-size:0.85rem}.tabs button.on{background:var(--acc);color:#04101d}
 .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
@@ -30,7 +32,7 @@ details.info summary::-webkit-details-marker{display:none}
 details.info p{margin:8px 0}
 .foot{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);text-align:center;font-size:.78rem;letter-spacing:.04em;color:var(--mut)}
 .foot b{color:var(--acc);font-weight:700}
-h1{font-size:1.55rem;margin:0 0 4px;letter-spacing:-.02em}h2{font-size:1.3rem;margin:0 0 4px;letter-spacing:-.01em}h3{font-size:.95rem;margin:22px 0 8px}
+h1{font-size:1.55rem;margin:0;letter-spacing:-.02em}h2{font-size:1.3rem;margin:0 0 4px;letter-spacing:-.01em}h3{font-size:.95rem;margin:22px 0 8px}
 p{margin:4px 0}.mut{color:var(--mut);font-size:.88rem}code{background:var(--card);padding:1px 5px;border-radius:4px}
 .sp{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin:8px 0}
 .badge{display:inline-block;font-size:.74rem;font-weight:600;padding:2px 9px;border-radius:99px;background:var(--acc2);color:var(--acc);margin-left:6px}
@@ -77,7 +79,6 @@ let mode = "lake", fishSel = null;
 let REG = [];
 let myState = (()=>{try{return localStorage.getItem("myState")||"BY"}catch(e){return "BY"}})();
 
-// Basis-Hilfsfunktionen
 const esc = s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt = iso=>new Date(iso).toLocaleDateString("de-DE");
 const freq = n=>n>=10?"sehr häufig":n>=4?"häufig":"selten";
@@ -100,7 +101,6 @@ function topLure(cs){
   const t=Object.entries(m).sort((a,b)=>b[1]-a[1])[0]; return t?t[0]:null;
 }
 
-// Favoriten Management (Lokal + Cloud Sync)
 let favs = (()=>{try{return JSON.parse(localStorage.getItem("myFavs")||'{"lakes":[],"fish":[]}')}catch(e){return {lakes:[],fish:[]}}})();
 function saveFavs(){try{localStorage.setItem("myFavs",JSON.stringify(favs))}catch(e){}}
 
@@ -149,6 +149,16 @@ const speciesOpts = Object.entries(SPECIES).sort((a,b)=>a[1].localeCompare(b[1])
 const STATES={BW:"Baden-Württemberg",BY:"Bayern",BE:"Berlin",BB:"Brandenburg",HB:"Bremen",HH:"Hamburg",HE:"Hessen",MV:"Mecklenburg-Vorpommern",NI:"Niedersachsen",NW:"Nordrhein-Westfalen",RP:"Rheinland-Pfalz",SL:"Saarland",SN:"Sachsen",ST:"Sachsen-Anhalt",SH:"Schleswig-Holstein",TH:"Thüringen"};
 const BASINS={D:"Donau",E:"Elbe",R:"Rhein",W:"Weser"};
 const SPECIAL={bodensee:"Am Bodensee gelten abweichende Regeln der Internationalen Bodensee-Fischereiordnung. Bitte vor Ort prüfen."};
+
+// Strukturierte Gewässer-Infos (Wasserbegebenheit & Top-Highlights)
+const LAKE_DETAILS = {
+  // Falls du spezifische IDs hast, kannst du sie hier direkt anlegen. Für alle anderen gibt es einen intelligenten Fallback.
+  default: {
+    structure: "Abwechslungsreiche Uferzonen mit flachen Schilfgürteln, vereinzelt Totholz und tieferen Rinnen im Mittelwasser.",
+    highlights: ["Hecht", "Barsch", "Karpfen"]
+  }
+};
+
 const INFO={
  hecht:["Schneller Raubfisch mit entenschnabelartigem Maul.","In Krautbänken, an Schilfkanten, Totholz und Uferabbrüchen."],
  barsch:["Gestreifter, gesellig jagender Raubfisch.","An Spundwänden, Stegen, Kanten und Krautfeldern, oft im Schwarm."],
@@ -169,7 +179,7 @@ const INFO={
  huchen:["Größter Raubfisch unter den Salmoniden, typisch für die Donau.","In tiefen Gumpen und Kolken kräftig strömender Donauzuflüsse."],
  barbe:["Strömungsliebender Grundfisch mit Barteln.","Über Kiesbänken und in Strömungsrinnen größerer Flüsse."],
  doebel:["Kräftiger Allesfresser, auch Aitel genannt.","Unter überhängenden Büschen, an Brücken und Strömungskanten."],
- rapfen:["Schneller Raubfisch unter den Karpfenartigen (Schied).","Im Freiwasser, an Kehrwasserkanten und Wehren großer Flüsse."],
+ rapfen:["Schneller Raubfisch unter den Karpfenartigen (Schied).","In Freiwassern, an Kehrwasserkanten und Wehren großer Flüsse."],
  graskarpfen:["Pflanzenfressender, eingebürgerter Karpfenfisch.","In verkrauteten, warmen Gewässern, oft nahe der Oberfläche."],
  quappe:["Einziger Dorschartiger im Süßwasser, nachtaktiv.","In kühlem Wasser an Steinen und in Tiefenzonen, im Winter besonders aktiv."],
  kaulbarsch:["Kleiner, barschartiger Grundfisch.","Über sandigem und kiesigem Grund in Seen und Flüssen."]};
@@ -220,10 +230,22 @@ function regStatus(r,state){
   return {level,headline:head,lines:L};
 }
 const dotHtml=s=>`<i class="dot ${s.level}" title="${esc(s.headline)}"></i>`;
+
 function infoCard(sp,state){
   const s=regStatus(regFor(state,sp,null),state), i=INFO[sp]||["",""];
   const isFav = favs.fish.includes(sp);
   return `<details class="info ${s.level}"${s.level==="red"?" open":""}><summary>${fishImg(sp,56)}<div><b>${esc(SPECIES[sp])}</b> ${dotHtml(s)}<div class="mut">${esc(s.headline)} (${esc(STATES[state]||"")})</div></div></summary>
+   <p>${esc(i[0])}</p><p class="mut"><b>Wo er steht:</b> ${esc(i[1])}</p>${s.lines.map((l,k)=>`<p${k===0&&s.level!=="grey"?' style="font-weight:600"':""}>${esc(l)}</p>`).join("")}
+   <button class="ghost" onclick="toggleFavFish('${sp}')" style="width:100%;margin-top:10px">${isFav?"★ Aus Favoriten entfernen":"☆ Zu Favoriten hinzufügen"}</button></details>`;
+}
+
+// Aufklappbare Info-Karte für Fischarten direkt in der Gewässeransicht (gemäß Wunsch als open up Felder)
+function lakeInfoCard(sp,lake){
+  const state = lake.state;
+  const s = regStatus(regFor(state,sp,lake.basin),state);
+  const i = INFO[sp]||["",""];
+  const isFav = favs.fish.includes(sp);
+  return `<details class="info ${s.level}"><summary>${fishImg(sp,56)}<div><b>${esc(SPECIES[sp])}</b> ${dotHtml(s)}<div class="mut">${esc(s.headline)} (${esc(STATES[state]||"")})</div></div></summary>
    <p>${esc(i[0])}</p><p class="mut"><b>Wo er steht:</b> ${esc(i[1])}</p>${s.lines.map((l,k)=>`<p${k===0&&s.level!=="grey"?' style="font-weight:600"':""}>${esc(l)}</p>`).join("")}
    <button class="ghost" onclick="toggleFavFish('${sp}')" style="width:100%;margin-top:10px">${isFav?"★ Aus Favoriten entfernen":"☆ Zu Favoriten hinzufügen"}</button></details>`;
 }
@@ -296,6 +318,11 @@ async function loadLakes(){
 
 function render(){ picking=false; currentLake ? select(currentLake) : home(); }
 
+const brandHeader = `<div class="brand-header">
+  <img src="PHOTO-2026-10-20-08-33-55.jpg" alt="Logo" onerror="this.style.display='none'">
+  <h1>Da kann man Angeln</h1>
+</div>`;
+
 const tabs = ()=>`<div class="tabs">
   <button class="${mode==="lake"?"on":""}" data-m="lake">Gewässer</button>
   <button class="${mode==="fish"?"on":""}" data-m="fish">Fischarten</button>
@@ -309,7 +336,7 @@ function findNearestLakeByGPS() {
     alert("Dein Browser unterstützt keine Geolocation.");
     return;
   }
-  panel.innerHTML = `<h1>Da kann man Angeln</h1><p class="mut">Ermittle deinen GPS-Standort...</p>`;
+  panel.innerHTML = `${brandHeader}<p class="mut">Ermittle deinen GPS-Standort...</p>`;
 
   navigator.geolocation.getCurrentPosition(
     position => {
@@ -340,7 +367,7 @@ function findNearestLakeByGPS() {
           map.setZoom(13);
         }
       } else {
-        panel.innerHTML = `<h1>Da kann man Angeln</h1>
+        panel.innerHTML = `${brandHeader}
          <p class="mut" style="color:var(--warn); margin:12px 0;">Kein Gewässer in deiner unmittelbaren Nähe gefunden.</p>
          <button class="ghost" onclick="home()">Zurück zur Übersicht</button>`;
       }
@@ -358,7 +385,7 @@ function home(filter=""){
   if(mode==="fish"){fishHome();return}
   if(mode==="fav"){favHome();return}
 
-  panel.innerHTML = `${authBar()}<h1>Da kann man Angeln</h1>${tabs()}
+  panel.innerHTML = `${authBar()}${brandHeader}${tabs()}
    
    <button onclick="findNearestLakeByGPS()" style="width:100%;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;">
      📍 Am Gewässer? GPS-Standort erkennen
@@ -381,7 +408,7 @@ function home(filter=""){
 }
 
 function favHome(){
-  panel.innerHTML = `${authBar()}<h1>Da kann man Angeln</h1>${tabs()}
+  panel.innerHTML = `${authBar()}${brandHeader}${tabs()}
    <h3>⭐ Deine Lieblings-Gewässer</h3>
    <div class="list" id="favLakes"></div>
    <h3>⭐ Deine Lieblings-Fischarten</h3>
@@ -413,19 +440,40 @@ async function select(id){
   const opts = speciesOpts.map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join("");
   const isFav = favs.lakes.includes(id);
 
+  // Gewässer-Begebenheiten und Highlight-Fische ermitteln
+  const lakeDetail = LAKE_DETAILS[id] || LAKE_DETAILS.default;
+  const highlightSpeciesNames = lakeDetail.highlights.map(spKey => SPECIES[spKey] || spKey).join(", ");
+
   panel.innerHTML = `${authBar()}<button class="ghost" id="back">Zurück zur Übersicht</button>
    <h2 style="margin-top:14px">${esc(lake.name)}</h2>
    <p class="mut">${TYPES[lake.type]||""}${lake.state?`, ${esc(STATES[lake.state]||"")}`:""}, ${catches.length} gemeldete Fänge, ${rows.length} Fischarten</p>
    
    <button class="ghost" onclick="toggleFavLake('${id}')" style="width:100%;margin:10px 0">${isFav?"⭐ Aus Favoriten entfernen":"☆ Zu Favoriten hinzufügen"}</button>
 
+   <!-- Kurze Info über die See-Begebenheit -->
+   <div class="note" style="background:var(--card);border:1px solid var(--line);">
+     🌊 <b>Wasser- & Uferbegebenheit:</b><br>
+     ${esc(lakeDetail.structure)}
+   </div>
+
+   <!-- Highlight-Fische (Wofür ist der See bekannt) -->
+   <div class="note">
+     ⭐ <b>Highlight-Fisch(e):</b> ${esc(highlightSpeciesNames)} – besonders stark vertreten oder dafür bekannt.
+   </div>
+
    ${loadErr?`<p class="err">Daten konnten nicht geladen werden: ${esc(loadErr)}</p>`:""}
    ${SPECIAL[lake.id]?`<div class="note">${esc(SPECIAL[lake.id])}</div>`:""}
-   <h3>Fischarten</h3>
-   ${rows.map(([sp,a])=>`<div class="sp">${fishImg(sp,30)} ${dotHtml(regStatus(regFor(lake.state,sp,lake.basin),lake.state))} <b>${esc(SPECIES[sp]||sp)}</b><span class="badge">${status(a)}</span>
-     ${a.stocked&&a.count>0?'<span class="badge nat">Besatz</span>':""}${a.gone?`<span class="badge w">${a.gone}× als verschwunden gemeldet</span>`:""}
-     ${a.count>0?`<p class="mut">${freq(a.count)} (${a.count} Fänge), letzter Fang ${fmt(a.last)}${a.topLure?`, Top-Köder: ${esc(a.topLure.name)} (${a.topLure.share} %)`:""}</p>`
-     :`<p class="mut">Noch keine Fänge in der App registriert</p>`}</div>`).join("")}
+   
+   <h3>Fischarten (Schonzeiten & Details)</h3>
+   ${rows.map(([sp,a])=>`
+     ${lakeInfoCard(sp, lake)}
+   `).join("")}
+
+   <!-- Rechtlicher Hinweis & Angelkarten-Empfehlung -->
+   <div class="note" style="margin-top:16px; background:#182232; border-left:4px solid var(--acc);">
+     ⚠️ <b>Wichtiger Hinweis:</b> Die hier angezeigten Schonzeiten und Mindestmaße dienen nur als Orientierung und haben **keine rechtliche Grundlage**. Bitte schaue vor jedem Angeln unbedingt auf deine **Angelkarte / Erlaubniskarte** (Erlaubnisschein) des jeweiligen Gewässers oder Vereins, da dort die verbindlichen Regeln stehen. Denke auch daran, dir rechtzeitig eine gültige Angelkarte zu kaufen! Petri Heil! 🎣
+   </div>
+
    ${user?`<h3>Fang eintragen</h3>
    <form id="catchForm"><select name="species" aria-label="Fischart">${opts}</select>
      <input name="lure" placeholder="Köder, z. B. Gummifisch" maxlength="60">
@@ -453,7 +501,7 @@ async function select(id){
 }
 
 function fishHome(){
-  panel.innerHTML = `${authBar()}<h1>Da kann man Angeln</h1>${tabs()}
+  panel.innerHTML = `${authBar()}${brandHeader}${tabs()}
    <p class="mut">Worauf hast du heute Lust? Tippe auf eine Fischart.</p>
    <label class="mut" for="stSel">Dein Bundesland</label>
    <select id="stSel" style="width:100%;margin:4px 0 8px">${Object.entries(STATES).map(([k,v])=>`<option value="${k}"${k===myState?" selected":""}>${v}${REG.some(r=>r.state===k)?"":" (noch keine Daten)"}</option>`).join("")}</select>
