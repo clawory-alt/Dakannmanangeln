@@ -150,11 +150,16 @@ const STATES={BW:"Baden-Württemberg",BY:"Bayern",BE:"Berlin",BB:"Brandenburg",H
 const BASINS={D:"Donau",E:"Elbe",R:"Rhein",W:"Weser"};
 const SPECIAL={bodensee:"Am Bodensee gelten abweichende Regeln der Internationalen Bodensee-Fischereiordnung. Bitte vor Ort prüfen."};
 
+// Erweiterte und detailreiche Gewässer-Begebenheiten mit Bullet Points
 const LAKE_DETAILS = {
   default: {
     title: "Wasser- & Uferbegebenheit im Detail",
-    intro: "Flache Schilfgürtel im Nordende, steinige Packungen und abfallende Kanten im tieferen Bereich.",
-    details: "Das Gewässer bietet eine abwechslungsreiche Struktur. Im nördlichen Flachwasserbereich finden sich ausgedehnte Krautfelder und Schilfgürtel – ideal für Raubfische wie Hecht und Friedfische im Frühjahr. Nach Süden hin fällt das Ufer kontinuierlich ab und bietet mit harten Kanten und Totholz exzellente Unterstände für Barsch und Zander."
+    intro: "Flache Schilfgürtel im Nordende, steinige Packungen und abfallende Kanten.",
+    bullets: [
+      "<b>Nordende / Flachwasser:</b> Ausgedehnte Schilfgürtel und flache Krautfelder (oft 1–3 m tief), ideal für Hechte im Frühjahr.",
+      "<b>Mittlerer Bereich:</b> Abfallende Kanten und Totholzstrukturen; Hotspots für kapitale Barsche.",
+      "<b>Tiefenwasser / Rinnen:</b> Steinige Packungen und tiefere Zonen bis 12 m, besonders geeignet für Zander und Seesaiblinge."
+    ]
   }
 };
 
@@ -174,7 +179,7 @@ const INFO={
  saibling:["Kaltwasserfisch der tiefen Alpenseen.","In großer Tiefe über Kiesgrund, bevorzugt sehr kaltes, klares Wasser."],
  bachforelle:["Standorttreue Forelle mit roten Punkten.","In kühlen, sauerstoffreichen Bächen hinter Steinen und unter Uferböschungen."],
  regenbogen:["Eingebürgerte Forelle mit rosa Seitenband.","In Forellenteichen, Seen und Flüssen mit Besatz, meist oberflächennah."],
- aesche:["Schlanke Salmonidenart mit großer Rückenflosse.","In schnell fließenden, klaren Flüssen über Kiesgrund."],
+ aesche:["Schlanke Salmonidenart mit großer Rückenflosse.","In schnell flenden, klaren Flüssen über Kiesgrund."],
  huchen:["Größter Raubfisch unter den Salmoniden, typisch für die Donau.","In tiefen Gumpen und Kolken kräftig strömender Donauzuflüsse."],
  barbe:["Strömungsliebender Grundfisch mit Barteln.","Über Kiesbänken und in Strömungsrinnen größerer Flüsse."],
  doebel:["Kräftiger Allesfresser, auch Aitel genannt.","Unter überhängenden Büschen, an Brücken und Strömungskanten."],
@@ -453,12 +458,12 @@ async function select(id){
    
    <button class="ghost" onclick="toggleFavLake('${id}')" style="width:100%;margin:10px 0">${isFav?"⭐ Aus Favoriten entfernen":"☆ Zu Favoriten hinzufügen"}</button>
 
-   <!-- Kurzer, prägnanter Warnhinweis direkt oben -->
+   <!-- Kurzer, prägnanter Warnhinweis -->
    <div class="note" style="background:#182232; border-left:4px solid var(--warn); margin-top:12px;">
      ⚠️ <b>Achtung:</b> Es gelten wie immer die Maße auf eurer Angelkarte und das rechtliche Schonmaß – dies hier ist keine rechtliche Info! Petri Heil! 🎣
    </div>
 
-   <!-- Wasser- & Uferbegebenheit als aufklappbares Feld -->
+   <!-- Wasser- & Uferbegebenheit als detaillierter Aufklapp-Button -->
    <details class="info" style="border-left-color: var(--acc);">
      <summary>
        <span style="font-size:1.4rem">🌊</span>
@@ -467,12 +472,15 @@ async function select(id){
          <div class="mut">${esc(lakeDetail.intro)}</div>
        </div>
      </summary>
-     <p style="margin-top:10px">${esc(lakeDetail.details)}</p>
+     <ul style="margin:10px 0 5px 20px; padding:0; display:grid; gap:6px;">
+       ${lakeDetail.bullets.map(b => `<li>${b}</li>`).join("")}
+     </ul>
    </details>
 
-   <!-- Highlight-Fische als vollwertige Aufklapp-Karten -->
-   <h3>⭐ Highlight-Fische</h3>
-   ${lakeDetail.highlights.map(spKey => lakeInfoCard(spKey, lake)).join("")}
+   <!-- Highlight-Fische mit detaillierten Info-Karten -->
+   <h3>⭐ Highlight-Fische & Hotspots</h3>
+   ${lakeInfoCard("hecht", lake)}
+   ${lakeInfoCard("barsch", lake)}
 
    ${loadErr?`<p class="err">Daten konnten nicht geladen werden: ${esc(loadErr)}</p>`:""}
    ${SPECIAL[lake.id]?`<div class="note">${esc(SPECIAL[lake.id])}</div>`:""}
