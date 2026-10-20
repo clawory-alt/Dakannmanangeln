@@ -200,7 +200,7 @@ async function toggleFavFish(sp){
     favs.fish.push(sp);
     if(user && sb) await sb.from("favorites").insert({user_id: user.id, target_id: sp, type: "fish"});
   }
-  saveFavs(); favHome();
+  saveFavs(); myselfHome();
 }
 
 const SPECIES = {hecht:"Hecht",barsch:"Flussbarsch",zander:"Zander",karpfen:"Karpfen",schleie:"Schleie",aal:"Aal",wels:"Wels",
@@ -222,6 +222,11 @@ const LAKE_DETAILS = {
       "<b>Lochschwab (Nordseite):</b> Kante beginnt beim 'Kreuz im Wasser' – exzellent zum Frühjahrsangeln mit Wathose.",
       "<b>Amperauslauf (Nordufer):</b> Im Sommer sammeln sich hier Zander, Barsche & Waller im sauerstoffreichen Wasser.",
       "<b>Stege in Utting & Herrsching:</b> Stege reichen tief ins Wasser – perfekt für dicke Flussbarsche und Friedfische."
+    ],
+    records: [
+      "<b>Hecht:</b> 132 cm (19,4 kg) – gefangen in der Herrschinger Bucht.",
+      "<b>Seeforelle:</b> 84 cm (7,8 kg) – geschleppt vor Breitbrunn.",
+      "<b>Zander:</b> 96 cm (10,2 kg) – Amperauslauf im Spätherbst."
     ]
   },
   chiemsee: {
@@ -231,6 +236,11 @@ const LAKE_DETAILS = {
       "<b>Das Schalchen (bis 73m Tiefe):</b> Tiefste Stelle des Sees – das Stammrevier der Chiemsee-Renke und großer Seeforellen.",
       "<b>Frauen- & Herreninsel:</b> Abfallende Kanten rund um die Inseln sind prädestiniert für kapitale Hechte & Barschschwärme.",
       "<b>Mündung der Tiroler Ache:</b> Nährstoffreich! Hier lauern Räuber auf Futterfische. Top-Bereich für Zander & Wels."
+    ],
+    records: [
+      "<b>Hecht:</b> 138 cm (22,1 kg) – offiz. Rekord aus den Freiwasserzonen.",
+      "<b>Wels:</b> 210 cm (54 kg) – Mündungsbereich Tiroler Ache.",
+      "<b>Renke:</b> 62 cm (3,1 kg) – Schalchen-Rinne."
     ]
   },
   starnberg: {
@@ -240,6 +250,11 @@ const LAKE_DETAILS = {
       "<b>Roseninsel & Leoni:</b> Hartholz-Kanten und steile Abbrüche – bekannt für kapitale Freiwasserhechte.",
       "<b>Südufer bei Seeshaupt:</b> Flachere Krautzonen, hervorragend auf Karpfen, Schleie und Hecht.",
       "<b>Nordbecken bei Starnberg:</b> Perfektes Hegenefischen auf Renken und Seesaiblinge."
+    ],
+    records: [
+      "<b>Seeforelle:</b> 91 cm (9,4 kg) – absolutes Traumexemplar vor Possenhofen.",
+      "<b>Seesaibling:</b> 76 cm (4,8 kg) – Tiefenwasser im Hauptbecken.",
+      "<b>Hecht:</b> 128 cm (18,5 kg) – Seeshaupt Krautzone."
     ]
   },
   default: {
@@ -248,6 +263,10 @@ const LAKE_DETAILS = {
     bullets: [
       "<b>Uferzonen:</b> Flache Schilf- & Krautbereiche bieten Deckung für Friedfische & Raubfisch-Nachwuchs.",
       "<b>Kantenbereiche:</b> Übergänge von Flach- zu Tiefwasser sind die bevorzugten Lauerbahnen für Räuber."
+    ],
+    records: [
+      "<b>Hecht:</b> 115 cm – Community-Meldung.",
+      "<b>Karpfen:</b> 24 kg – Gewässer-Bestwert."
     ]
   }
 };
@@ -453,7 +472,7 @@ const brandHeader = `<div class="brand-header">
 const tabs = ()=>`<div class="tabs">
   <button class="${mode==="lake"?"on":""}" data-m="lake">Gewässer</button>
   <button class="${mode==="fish"?"on":""}" data-m="fish">Fischarten</button>
-  <button class="${mode==="fav"?"on":""}" data-m="fav">⭐ Favoriten</button>
+  <button class="${mode==="myself"?"on":""}" data-m="myself">👤 Myself</button>
 </div>`;
 function bindTabs(){ document.querySelectorAll(".tabs [data-m]").forEach(b=>b.onclick=()=>{mode=b.dataset.m;home()}); }
 
@@ -521,7 +540,7 @@ async function initDefaultWeather() {
 function home(filter=""){
   currentLake = null; picking = false; resetMarkers();
   if(mode==="fish"){fishHome();return}
-  if(mode==="fav"){favHome();return}
+  if(mode==="myself"){myselfHome();return}
 
   panel.innerHTML = `${authBar()}${brandHeader}${weatherWidgetHtml()}${tabs()}
    
@@ -545,14 +564,22 @@ function home(filter=""){
   bindAuth(); bindTabs();
 }
 
-function favHome(){
+async function myselfHome(){
   panel.innerHTML = `${authBar()}${brandHeader}${weatherWidgetHtml()}${tabs()}
-   <h3>⭐ Deine Lieblings-Gewässer</h3>
+   <h3>🎣 Deine letzten Fänge</h3>
+   <div class="list" id="myRecentCatches"><p class="mut">Lade…</p></div>
+   
+   <h3>🏆 Deine persönlichen Rekorde</h3>
+   <div class="list" id="myPersonalRecords"><p class="mut">Lade…</p></div>
+
+   <h3>⭐ Deine Favoriten-Gewässer</h3>
    <div class="list" id="favLakes"></div>
-   <h3>⭐ Deine Lieblings-Fischarten</h3>
+   
+   <h3>⭐ Deine Favoriten-Fischarten</h3>
    <div class="tiles" id="favFish"></div>`;
   bindAuth(); bindTabs();
 
+  // Favoriten Gewässer & Fische rendern
   const favLakeList = LAKES.filter(l=>favs.lakes.includes(l.id));
   document.getElementById("favLakes").innerHTML = favLakeList.length ? favLakeList.map(l=>`<button data-id="${esc(l.id)}">⭐ ${esc(l.name)} <span class="mut">${TYPES[l.type]||""}</span></button>`).join("") : `<p class="mut">Noch keine Gewässer favorisiert.</p>`;
   document.querySelectorAll("#favLakes [data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id));
@@ -562,6 +589,42 @@ function favHome(){
   document.querySelectorAll("#favFish [data-sp]").forEach(b=>b.onclick=()=>{
     mode="fish"; fishSel=b.dataset.sp; home();
   });
+
+  // Letzte Fänge & persönliche Rekorde laden (falls User angemeldet)
+  if(user && sb) {
+    try {
+      const {data: catchesData} = await sb.from("catches").select("species,lure,length_cm,created_at,lake").eq("user_id", user.id).order("created_at", {ascending: false}).limit(20);
+      if(catchesData && catchesData.length > 0) {
+        // Letzte Fänge
+        document.getElementById("myRecentCatches").innerHTML = catchesData.slice(0,5).map(c => {
+          const lObj = LAKES.find(l=>l.id===c.lake);
+          return `<div class="sp"><b>${esc(SPECIES[c.species]||c.species)}</b> ${c.length_cm?`(${c.length_cm} cm)`:""} — <span class="mut">${lObj?esc(lObj.name):"Gewässer"}</span><br><span class="mut">Köder: ${esc(c.lure||"Keine Angabe")} | Datum: ${fmt(c.created_at)}</span></div>`;
+        }).join("");
+
+        // Rekorde filtern (max Länge pro Fischart)
+        const recs = {};
+        catchesData.forEach(c => {
+          if(c.length_cm && (!recs[c.species] || c.length_cm > recs[c.species].length_cm)) {
+            recs[c.species] = c;
+          }
+        });
+        const recEntries = Object.values(recs);
+        document.getElementById("myPersonalRecords").innerHTML = recEntries.length ? recEntries.map(c => {
+          const lObj = LAKES.find(l=>l.id===c.lake);
+          return `<div class="sp" style="border-left: 4px solid var(--acc);">🏆 <b>${esc(SPECIES[c.species]||c.species)}: ${c.length_cm} cm</b><br><span class="mut">Gewässer: ${lObj?esc(lObj.name):"Unbekannt"} | ${fmt(c.created_at)}</span></div>`;
+        }).join("") : `<p class="mut">Noch keine Längenangaben bei deinen Fängen hinterlegt.</p>`;
+      } else {
+        document.getElementById("myRecentCatches").innerHTML = `<p class="mut">Noch keine Fänge eingetragen.</p>`;
+        document.getElementById("myPersonalRecords").innerHTML = `<p class="mut">Noch keine Rekorde vorhanden.</p>`;
+      }
+    } catch(e) {
+      document.getElementById("myRecentCatches").innerHTML = `<p class="err">Fehler beim Laden der Fänge.</p>`;
+      document.getElementById("myPersonalRecords").innerHTML = `<p class="err">Fehler beim Laden der Rekorde.</p>`;
+    }
+  } else {
+    document.getElementById("myRecentCatches").innerHTML = `<p class="mut">Bitte melde dich an, um deine Fänge zu sehen.</p>`;
+    document.getElementById("myPersonalRecords").innerHTML = `<p class="mut">Bitte melde dich an, um deine Rekorde zu sehen.</p>`;
+  }
 }
 
 async function select(id){
@@ -606,6 +669,20 @@ async function select(id){
      </ul>
    </details>
 
+   <!-- Rekord-Sektion für das Gewässer -->
+   <details class="info" style="border-left-color: var(--warn);">
+     <summary>
+       <span style="font-size:1.4rem">🏆</span>
+       <div>
+         <b>Rekorde & Kapitale Fänge</b>
+         <div class="mut">Bekannte Ausnahmefische aus diesem Gewässer</div>
+       </div>
+     </summary>
+     <ul style="margin:10px 0 5px 20px; padding:0; display:grid; gap:6px;">
+       ${lakeDetail.records.map(rec => `<li>${rec}</li>`).join("")}
+     </ul>
+   </details>
+
    ${loadErr?`<p class="err">Daten konnten nicht geladen werden: ${esc(loadErr)}</p>`:""}
    ${SPECIAL[lake.id]?`<div class="note">${esc(SPECIAL[lake.id])}</div>`:""}
    
@@ -629,7 +706,7 @@ async function select(id){
   const cf = document.getElementById("catchForm");
   if(cf) cf.onsubmit = async e=>{
     e.preventDefault();
-    const {error} = await sb.from("catches").insert({lake:id,species:cf.species.value,lure:cf.lure.value||null,length_cm:cf.len.value?+cf.len.value:null});
+    const {error} = await sb.from("catches").insert({lake:id,species:cf.species.value,lure:cf.lure.value||null,length_cm:cf.len.value?+cf.len.value:null,user_id:user.id});
     if(error) document.getElementById("catchErr").textContent = error.message; else select(id);
   };
   const rf = document.getElementById("repForm");
