@@ -31,9 +31,9 @@ details.info.red{border-left-color:#ff4d4f}details.info.yellow{border-left-color
 details.info summary{display:flex;gap:12px;align-items:center;cursor:pointer;list-style:none}
 details.info summary::-webkit-details-marker{display:none}
 details.info p{margin:8px 0}
-.weather-widget {background: linear-gradient(135deg, #121923 0%, #1a2636 100%); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; margin: 12px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.3);}
-.weather-widget summary {display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none;}
-.weather-widget summary::-webkit-details-marker {display: none;}
+.weather-widget, .bait-widget {background: linear-gradient(135deg, #121923 0%, #1a2636 100%); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; margin: 10px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.3);}
+.weather-widget summary, .bait-widget summary {display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none;}
+.weather-widget summary::-webkit-details-marker, .bait-widget summary::-webkit-details-marker {display: none;}
 .ww-compact {display: flex; align-items: center; gap: 14px; width: 100%; font-size: 0.9rem;}
 .ww-details {margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem; color: var(--mut);}
 .ww-details b {color: var(--ink);}
@@ -42,9 +42,6 @@ details.info p{margin:8px 0}
 h1{font-size:1.45rem;margin:0;letter-spacing:-.02em}h2{font-size:1.3rem;margin:0 0 4px;letter-spacing:-.01em}h3{font-size:.95rem;margin:22px 0 8px}
 p{margin:4px 0}.mut{color:var(--mut);font-size:.88rem}code{background:var(--card);padding:1px 5px;border-radius:4px}
 .sp{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin:8px 0}
-.badge{display:inline-block;font-size:.74rem;font-weight:600;padding:2px 9px;border-radius:99px;background:var(--acc2);color:var(--acc);margin-left:6px}
-.badge.nat{background:transparent;border:1px solid var(--line);color:var(--mut)}
-.badge.w{background:transparent;border:1px solid var(--warn);color:var(--warn)}
 form{display:grid;gap:8px;margin-top:8px}
 select,input,button{font:inherit;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
 input::placeholder{color:var(--mut)}
@@ -86,7 +83,7 @@ let mode = "lake", fishSel = null;
 let REG = [];
 let myState = (()=>{try{return localStorage.getItem("myState")||"BY"}catch(e){return "BY"}})();
 
-let liveWeather = { temp: "--", windSpeed: "--", windDir: "N", pressure: "--", rain: "--", index: "--" };
+let liveWeather = { temp: 14, windSpeed: 10, windDir: "NW", pressure: 1016, rain: 0, index: "8.2", bait: "Gummifisch (Firetiger, 12cm)", action: "Faulenzen / Kontinuierlich einleiern" };
 
 async function fetchWeather(lat, lng) {
   try {
@@ -98,14 +95,31 @@ async function fetchWeather(lat, lng) {
       liveWeather.windSpeed = Math.round(c.wind_speed_10m);
       liveWeather.pressure = Math.round(c.surface_pressure);
       liveWeather.rain = c.precipitation;
+      
       const deg = c.wind_direction_10m;
       const dirs = ["N", "NO", "O", "SO", "S", "SW", "W", "NW"];
       liveWeather.windDir = dirs[Math.round((deg % 360) / 45) % 8];
+
       let score = 7.0;
       if (c.surface_pressure >= 1013 && c.surface_pressure <= 1022) score += 1.5;
       if (c.wind_speed_10m > 5 && c.wind_speed_10m < 25) score += 1.0;
       if (c.precipitation > 0) score += 0.5;
       liveWeather.index = Math.min(Math.max(score, 2.0), 10.0).toFixed(1);
+
+      // Automatische Köder-Empfehlung ("Bait To Go") basierend auf Wetter & Wassertemperatur
+      if (liveWeather.temp < 8) {
+        liveWeather.bait = "Slow Jigs / Dead Bait (Naturköder am System)";
+        liveWeather.action = "Sehr langsam schleifen / ultralangsames Führen";
+      } else if (c.wind_speed_10m > 20) {
+        liveWeather.bait = "Spinnerbait oder lauter Crankbait (Neon-Farben)";
+        liveWeather.action = "Durch die windgedrückten Uferregionen leiern";
+      } else if (c.precipitation > 0) {
+        liveWeather.bait = "Gummifisch in Schockfarben (Chartreuse / Pink)";
+        liveWeather.action = "Aggressives Jiggen an Kanten";
+      } else {
+        liveWeather.bait = "Gummifisch (Natural / Perlmut, 10-15cm)";
+        liveWeather.action = "Klassisches Faulenzen über Grund";
+      }
     }
   } catch(e) { console.error("Wetter Fehler:", e); }
 }
@@ -181,7 +195,6 @@ const STATES={BW:"Baden-Württemberg",BY:"Bayern",BE:"Berlin",BB:"Brandenburg",H
 const BASINS={D:"Donau",E:"Elbe",R:"Rhein",W:"Weser"};
 const SPECIAL={bodensee:"Am Bodensee gelten abweichende Regeln der Internationalen Bodensee-Fischereiordnung. Bitte vor Ort prüfen."};
 
-// Erweiterte Gewässer-Details mit Rekordfischen und Hotspots
 const LAKE_DETAILS = {
   ammersee: {
     title: "Ammersee: Tiefenstruktur & Revier-Tipps",
@@ -245,7 +258,7 @@ const LAKE_DETAILS = {
     title: "Wasser- & Uferbegebenheit im Detail",
     intro: "Abwechslungsreiche Struktur mit Schilf- und Tiefenzonen.",
     bullets: [
-      "<b>Uferzonen:</b> Flache Schilf- & Krautbereiche provide Deckung für Friedfische & Raubfisch-Nachwuchs.",
+      "<b>Uferzonen:</b> Flache Schilf- & Krautbereiche bieten Deckung für Friedfische & Raubfisch-Nachwuchs.",
       "<b>Kantenbereiche:</b> Übergänge von Flach- zu Tiefwasser sind die bevorzugten Lauerbahnen für Räuber.",
       "<b>Freiwasser:</b> Tiefere Rinnen beherbergen Freiwasserfische und Schwarmfische."
     ],
@@ -368,6 +381,19 @@ function weatherWidgetHtml(){
       <div>Windrichtung: <b>${liveWeather.windDir}</b></div>
       <div>Datenquelle: <b>Live (Open-Meteo)</b></div>
     </div>
+  </details>
+  
+  <details class="bait-widget">
+    <summary>
+      <div class="ww-compact">
+        <span>🎯 Bait To Go: <b style="color:var(--warn)">Empfohlen</b></span>
+      </div>
+      <span class="mut" style="font-size:0.8rem">▼</span>
+    </summary>
+    <div class="ww-details" style="grid-template-columns: 1fr;">
+      <div>Top-Köder: <b>${esc(liveWeather.bait)}</b></div>
+      <div>Führung: <b>${esc(liveWeather.action)}</b></div>
+    </div>
   </details>`;
 }
 
@@ -438,7 +464,6 @@ const brandHeader = `<div class="brand-header">
   <h1>Da kann man Angeln</h1>
 </div>`;
 
-// Tabs: Geändert zu "Myself" anstelle von Favoriten
 const tabs = ()=>`<div class="tabs">
   <button class="${mode==="lake"?"on":""}" data-m="lake">Gewässer</button>
   <button class="${mode==="fish"?"on":""}" data-m="fish">Fischarten</button>
@@ -525,11 +550,9 @@ async function home(filter=""){
   bindAuth(); bindTabs();
 }
 
-// Neue "Myself"-Ansicht mit Letzten Fängen, Persönlichen Rekorden & Favoriten
 async function myselfHome(){
   await fetchWeather(48.1371, 11.5754);
   
-  // Eigene Fänge aus Supabase laden, falls angemeldet
   let myCatches = [];
   if (user && sb) {
     const { data } = await sb.from("catches").select("species,lure,length_cm,created_at,lake").eq("user_id", user.id).order("created_at", {ascending: false}).limit(10);
