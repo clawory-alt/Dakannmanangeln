@@ -8,12 +8,12 @@
 <style>
 :root{--bg:#07090d;--pan:#0d1117;--card:#121923;--ink:#e8edf5;--mut:#7d8aa0;--line:#1c2634;--acc:#3b9cff;--acc2:#0f2236;--warn:#ff9b5e}
 *{box-sizing:border-box}
-body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);height:100vh;display:grid;grid-template-columns:1fr 420px}
+body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);height:100vh;display:grid;grid-template-columns:2fr 1fr}
 #map{height:100%;background:var(--bg)}
 aside{background:var(--pan);border-left:1px solid var(--line);overflow:auto;padding:22px;display:flex;flex-direction:column}
 #panel{flex:1}
 .brand-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.brand-header img{width:48px;height:48px;border-radius:50%;object-fit:cover;border:1px solid var(--acc)}
+.brand-header img{width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid var(--acc);flex-shrink:0}
 .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--card);padding:4px;border-radius:10px;margin:14px 0}
 .tabs button{background:transparent;color:var(--mut);padding:7px;font-size:0.85rem}.tabs button.on{background:var(--acc);color:#04101d}
 .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
@@ -32,7 +32,7 @@ details.info summary::-webkit-details-marker{display:none}
 details.info p{margin:8px 0}
 .foot{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);text-align:center;font-size:.78rem;letter-spacing:.04em;color:var(--mut)}
 .foot b{color:var(--acc);font-weight:700}
-h1{font-size:1.55rem;margin:0;letter-spacing:-.02em}h2{font-size:1.3rem;margin:0 0 4px;letter-spacing:-.01em}h3{font-size:.95rem;margin:22px 0 8px}
+h1{font-size:1.45rem;margin:0;letter-spacing:-.02em}h2{font-size:1.3rem;margin:0 0 4px;letter-spacing:-.01em}h3{font-size:.95rem;margin:22px 0 8px}
 p{margin:4px 0}.mut{color:var(--mut);font-size:.88rem}code{background:var(--card);padding:1px 5px;border-radius:4px}
 .sp{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin:8px 0}
 .badge{display:inline-block;font-size:.74rem;font-weight:600;padding:2px 9px;border-radius:99px;background:var(--acc2);color:var(--acc);margin-left:6px}
@@ -55,7 +55,7 @@ button.g{background:#fff;color:#1f1f1f;display:flex;align-items:center;justify-c
 .or{text-align:center;color:var(--mut);font-size:.8rem}
 .chk{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:.88rem}
 .chk label{display:flex;gap:6px;align-items:center}.chk input{padding:0;width:auto}
-@media (max-width:800px){body{grid-template-columns:1fr;grid-template-rows:45vh 1fr;height:auto}aside{border-left:0;border-top:1px solid var(--line)}}
+@media (max-width:900px){body{grid-template-columns:1fr;grid-template-rows:45vh 1fr;height:auto}aside{border-left:0;border-top:1px solid var(--line)}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
@@ -150,12 +150,10 @@ const STATES={BW:"Baden-Württemberg",BY:"Bayern",BE:"Berlin",BB:"Brandenburg",H
 const BASINS={D:"Donau",E:"Elbe",R:"Rhein",W:"Weser"};
 const SPECIAL={bodensee:"Am Bodensee gelten abweichende Regeln der Internationalen Bodensee-Fischereiordnung. Bitte vor Ort prüfen."};
 
-// Strukturierte Gewässer-Infos (Wasserbegebenheit & Top-Highlights)
 const LAKE_DETAILS = {
-  // Falls du spezifische IDs hast, kannst du sie hier direkt anlegen. Für alle anderen gibt es einen intelligenten Fallback.
   default: {
     structure: "Abwechslungsreiche Uferzonen mit flachen Schilfgürteln, vereinzelt Totholz und tieferen Rinnen im Mittelwasser.",
-    highlights: ["Hecht", "Barsch", "Karpfen"]
+    highlights: ["hecht", "barsch", "karpfen"]
   }
 };
 
@@ -183,7 +181,7 @@ const INFO={
  graskarpfen:["Pflanzenfressender, eingebürgerter Karpfenfisch.","In verkrauteten, warmen Gewässern, oft nahe der Oberfläche."],
  quappe:["Einziger Dorschartiger im Süßwasser, nachtaktiv.","In kühlem Wasser an Steinen und in Tiefenzonen, im Winter besonders aktiv."],
  kaulbarsch:["Kleiner, barschartiger Grundfisch.","Über sandigem und kiesigem Grund in Seen und Flüssen."]};
-const FS={hecht:["#6f9a5a","o","l"],barsch:["#9bb04a","b","m"],zander:["#8a9a78","b","l"],karpfen:["#c9a24a","","d"],schleie:["#6b8f4e","","m"],aal:["#7a7f58","","e"],wels:["#5a6358","w","l"],rotauge:["#c0ccd6","r","m"],brachse:["#b8b08a","","d"],rotfeder:["#d6a642","r","m"],renke:["#c7d3dc","","m"],seeforelle:["#a9b6b0","o","l"],saibling:["#7f8f9a","r","m"],bachforelle:["#a58a4e","o","m"],regenbogen:["#aab6c0","p","m"],aesche:["#8f9aa8","f","l"],huchen:["#a56a52","","l"],barbe:["#9a8a58","w","l"],doebel:["#8e9a8a","","m"],rapfen:["#aeb8c0","","l"],graskarpfen:["#8a9a5a","","l"],quappe:["#7a6a4a","w","l"],kaulbarsch:["#9a8f5a","o","m"]};
+const FS={hecht:[ "#6f9a5a","o","l"],barsch:["#9bb04a","b","m"],zander:["#8a9a78","b","l"],karpfen:["#c9a24a","","d"],schleie:["#6b8f4e","","m"],aal:[ "#7a7f58","","e"],wels:["#5a6358","w","l"],rotauge:["#c0ccd6","r","m"],brachse:["#b8b08a","","d"],rotfeder:[ "#d6a642","r","m"],renke:["#c7d3dc","","m"],seeforelle:["#a9b6b0","o","l"],saibling:["#7f8f9a","r","m"],bachforelle:["#a58a4e","o","m"],regenbogen:[ "#aab6c0","p","m"],aesche:["#8f9aa8","f","l"],huchen:["#a56a52","","l"],barbe:[ "#9a8a58","w","l"],doebel:["#8e9a8a","","m"],rapfen:["#aeb8c0","","l"],graskarpfen:[ "#8a9a5a","","l"],quappe:["#7a6a4a","w","l"],kaulbarsch:[ "#9a8f5a","o","m"]};
 function fishSvg(id){
   const [c,f,sh]=FS[id]||["#8aa0b0","","m"], ry={l:6,m:9,d:12,e:4}[sh], rx={l:25,m:22,d:20,e:27}[sh];
   let x=`<ellipse cx="32" cy="16" rx="${rx}" ry="${ry}" fill="${c}"/><path d="M${32+rx-3} 16 L62 6 L62 26 Z" fill="${c}"/><path d="M26 ${16-ry} Q32 ${16-ry-7} 40 ${16-ry}Z" fill="${c}" opacity=".8"/><circle cx="15" cy="14" r="2" fill="#0b1118"/><circle cx="15.6" cy="13.4" r=".7" fill="#fff"/>`;
@@ -239,7 +237,6 @@ function infoCard(sp,state){
    <button class="ghost" onclick="toggleFavFish('${sp}')" style="width:100%;margin-top:10px">${isFav?"★ Aus Favoriten entfernen":"☆ Zu Favoriten hinzufügen"}</button></details>`;
 }
 
-// Aufklappbare Info-Karte für Fischarten direkt in der Gewässeransicht (gemäß Wunsch als open up Felder)
 function lakeInfoCard(sp,lake){
   const state = lake.state;
   const s = regStatus(regFor(state,sp,lake.basin),state);
@@ -319,7 +316,7 @@ async function loadLakes(){
 function render(){ picking=false; currentLake ? select(currentLake) : home(); }
 
 const brandHeader = `<div class="brand-header">
-  <img src="PHOTO-2026-10-20-08-33-55.jpg" alt="Logo" onerror="this.style.display='none'">
+  <img src="PHOTO-2026-10-20-08-33-55.jpg" alt="Logo" onerror="this.onerror=null; this.src='logo.jpg'">
   <h1>Da kann man Angeln</h1>
 </div>`;
 
@@ -330,7 +327,6 @@ const tabs = ()=>`<div class="tabs">
 </div>`;
 function bindTabs(){ document.querySelectorAll(".tabs [data-m]").forEach(b=>b.onclick=()=>{mode=b.dataset.m;home()}); }
 
-/* ============ GPS-STANDORTERKENNUNG ============ */
 function findNearestLakeByGPS() {
   if (!navigator.geolocation) {
     alert("Dein Browser unterstützt keine Geolocation.");
@@ -440,7 +436,6 @@ async function select(id){
   const opts = speciesOpts.map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join("");
   const isFav = favs.lakes.includes(id);
 
-  // Gewässer-Begebenheiten und Highlight-Fische ermitteln
   const lakeDetail = LAKE_DETAILS[id] || LAKE_DETAILS.default;
   const highlightSpeciesNames = lakeDetail.highlights.map(spKey => SPECIES[spKey] || spKey).join(", ");
 
@@ -450,13 +445,18 @@ async function select(id){
    
    <button class="ghost" onclick="toggleFavLake('${id}')" style="width:100%;margin:10px 0">${isFav?"⭐ Aus Favoriten entfernen":"☆ Zu Favoriten hinzufügen"}</button>
 
+   <!-- Wichtiger Hinweis direkt oben platziert -->
+   <div class="note" style="background:#182232; border-left:4px solid var(--acc); margin-top:12px;">
+     ⚠️ <b>Wichtiger Hinweis:</b> Die hier angezeigten Schonzeiten und Mindestmaße dienen nur als Orientierung und haben <b>keine rechtliche Grundlage</b>. Bitte schaue vor jedem Angeln unbedingt auf deine <b>Angelkarte / Erlaubniskarte</b> des jeweiligen Gewässers oder Vereins, da dort die verbindlichen Regeln stehen. Denke auch daran, dir rechtzeitig eine gültige Angelkarte zu kaufen! Petri Heil! 🎣
+   </div>
+
    <!-- Kurze Info über die See-Begebenheit -->
    <div class="note" style="background:var(--card);border:1px solid var(--line);">
      🌊 <b>Wasser- & Uferbegebenheit:</b><br>
      ${esc(lakeDetail.structure)}
    </div>
 
-   <!-- Highlight-Fische (Wofür ist der See bekannt) -->
+   <!-- Highlight-Fische -->
    <div class="note">
      ⭐ <b>Highlight-Fisch(e):</b> ${esc(highlightSpeciesNames)} – besonders stark vertreten oder dafür bekannt.
    </div>
@@ -468,11 +468,6 @@ async function select(id){
    ${rows.map(([sp,a])=>`
      ${lakeInfoCard(sp, lake)}
    `).join("")}
-
-   <!-- Rechtlicher Hinweis & Angelkarten-Empfehlung -->
-   <div class="note" style="margin-top:16px; background:#182232; border-left:4px solid var(--acc);">
-     ⚠️ <b>Wichtiger Hinweis:</b> Die hier angezeigten Schonzeiten und Mindestmaße dienen nur als Orientierung und haben **keine rechtliche Grundlage**. Bitte schaue vor jedem Angeln unbedingt auf deine **Angelkarte / Erlaubniskarte** (Erlaubnisschein) des jeweiligen Gewässers oder Vereins, da dort die verbindlichen Regeln stehen. Denke auch daran, dir rechtzeitig eine gültige Angelkarte zu kaufen! Petri Heil! 🎣
-   </div>
 
    ${user?`<h3>Fang eintragen</h3>
    <form id="catchForm"><select name="species" aria-label="Fischart">${opts}</select>
