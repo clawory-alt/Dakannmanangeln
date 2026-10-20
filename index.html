@@ -13,7 +13,8 @@ body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif
 aside{background:var(--pan);border-left:1px solid var(--line);overflow:auto;padding:22px;display:flex;flex-direction:column}
 #panel{flex:1}
 .brand-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.brand-logo{width:42px;height:42px;border-radius:50%;border:2px solid var(--acc);flex-shrink:0;background:#0d1117;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.brand-logo{width:48px;height:48px;border-radius:50%;overflow:hidden;border:2px solid var(--acc);flex-shrink:0;background:#0d1117;}
+.brand-logo img{width:100%;height:100%;object-fit:cover;}
 .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--card);padding:4px;border-radius:10px;margin:14px 0}
 .tabs button{background:transparent;color:var(--mut);padding:7px;font-size:0.85rem}.tabs button.on{background:var(--acc);color:#04101d}
 .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
@@ -150,15 +151,62 @@ const STATES={BW:"Baden-Württemberg",BY:"Bayern",BE:"Berlin",BB:"Brandenburg",H
 const BASINS={D:"Donau",E:"Elbe",R:"Rhein",W:"Weser"};
 const SPECIAL={bodensee:"Am Bodensee gelten abweichende Regeln der Internationalen Bodensee-Fischereiordnung. Bitte vor Ort prüfen."};
 
-// Erweiterte und detailreiche Gewässer-Begebenheiten mit Bullet Points
+// Spezifische Hotspots für Highlight-Fische je Gewässer
 const LAKE_DETAILS = {
+  ammersee: {
+    title: "Ammersee: Tiefenstruktur & Revier-Tipps",
+    intro: "Herrschinger Bucht, Steilkanten bei Lochschwab & Amperauslauf.",
+    bullets: [
+      "<b>Herrschinger Bucht:</b> Absoluter Top-Hotspot. Fällt von der flachen Wat-Zone steil ab. Sehr gut auf Hecht & Seeforelle an der Kante.",
+      "<b>Lochschwab (Nordseite):</b> Kante beginnt beim 'Kreuz im Wasser' – exzellent zum Frühjahrsangeln mit Wathose.",
+      "<b>Amperauslauf (Nordufer):</b> Im Sommer sammeln sich hier Zander, Barsche & Waller im sauerstoffreichen Wasser.",
+      "<b>Stege in Utting & Herrsching:</b> Stege reichen tief ins Wasser – perfekt für dicke Flussbarsche und Friedfische."
+    ],
+    highlights: [
+      { sp: "hecht", hotspot: "Herrschinger Bucht & Schlepprouten vor Utting (3–8 m Tiefe an der Freiwasserkante)." },
+      { sp: "renke", hotspot: "Tiefenwasser im Freiwasser bei 12–20 m Tiefe. Bevorzugt mit Hegene im Juni & Juli." },
+      { sp: "zander", hotspot: "Fischbach-Mündung & Auslauf im Sommer bei Dämmerung." }
+    ]
+  },
+  chiemsee: {
+    title: "Chiemsee: Tiefenstruktur & Revier-Tipps",
+    intro: "Das 'Bayerische Meer' – Schalchen-Tiefen, Inselkanten & Flussmündungen.",
+    bullets: [
+      "<b>Das Schalchen (bis 73m Tiefe):</b> Tiefste Stelle des Sees – das Stammrevier der Chiemsee-Renke und großer Seeforellen.",
+      "<b>Frauen- & Herreninsel:</b> Abfallende Kanten rund um die Inseln sind prädestiniert für kapitale Hechte & Barschschwärme.",
+      "<b>Mündung der Tiroler Ache:</b> Nährstoffreich! Hier lauern Räuber auf Futterfische. Top-Bereich für Zander & Wels."
+    ],
+    highlights: [
+      { sp: "renke", hotspot: "Freiwasser vor Prien & Gstadt bei 15–25 m Tiefe mit feiner Hegene." },
+      { sp: "hecht", hotspot: "Schilfkanten und Krautfelder vor Bernau & Priener Bucht." },
+      { sp: "seeforelle", hotspot: "Tiefwasserzonen am Schalchen beim Schleppen im Frühjahr." }
+    ]
+  },
+  starnbergersee: {
+    title: "Starnberger See: Tiefenstruktur & Revier-Tipps",
+    intro: "Extrem tiefes Voralpengewässer (bis 127m) mit klarem Wasser.",
+    bullets: [
+      "<b>Roseninsel & Leoni:</b> Hartholz-Kanten und steile Abbrüche – bekannt für kapitale Freiwasserhechte.",
+      "<b>Südufer bei Seeshaupt:</b> Flachere Krautzonen, hervorragend auf Karpfen, Schleie und Hecht.",
+      "<b>Nordbecken bei Starnberg:</b> Perfektes Hegenefischen auf Renken und Seesaiblinge."
+    ],
+    highlights: [
+      { sp: "renke", hotspot: "Tiefen von 15–30 Meter im Nord- und Mittelbecken." },
+      { sp: "saibling", hotspot: "Sehr tiefes Freiwasser (20–40 m) über kühlem Kiesgrund." },
+      { sp: "hecht", hotspot: "Freiwasser-Schleppen entlang der 10m-Tiefenlinie." }
+    ]
+  },
   default: {
     title: "Wasser- & Uferbegebenheit im Detail",
-    intro: "Flache Schilfgürtel im Nordende, steinige Packungen und abfallende Kanten.",
+    intro: "Abwechslungsreiche Struktur mit Schilf- und Tiefenzonen.",
     bullets: [
-      "<b>Nordende / Flachwasser:</b> Ausgedehnte Schilfgürtel und flache Krautfelder (oft 1–3 m tief), ideal für Hechte im Frühjahr.",
-      "<b>Mittlerer Bereich:</b> Abfallende Kanten und Totholzstrukturen; Hotspots für kapitale Barsche.",
-      "<b>Tiefenwasser / Rinnen:</b> Steinige Packungen und tiefere Zonen bis 12 m, besonders geeignet für Zander und Seesaiblinge."
+      "<b>Uferzonen:</b> Flache Schilf- & Krautbereiche bieten Deckung für Friedfische & Raubfisch-Nachwuchs.",
+      "<b>Kantenbereiche:</b> Übergänge von Flach- zu Tiefwasser sind die bevorzugten Lauerbahnen für Räuber.",
+      "<b>Freiwasser:</b> Tiefere Rinnen beherbergen Freiwasserfische und Schwarmfische."
+    ],
+    highlights: [
+      { sp: "hecht", hotspot: "Entlang der Schilfkanten und Krautbänke in 2–6 m Tiefe." },
+      { sp: "barsch", hotspot: "An versunkenen Strukturen, Stegen und harten Kanten." }
     ]
   }
 };
@@ -179,7 +227,7 @@ const INFO={
  saibling:["Kaltwasserfisch der tiefen Alpenseen.","In großer Tiefe über Kiesgrund, bevorzugt sehr kaltes, klares Wasser."],
  bachforelle:["Standorttreue Forelle mit roten Punkten.","In kühlen, sauerstoffreichen Bächen hinter Steinen und unter Uferböschungen."],
  regenbogen:["Eingebürgerte Forelle mit rosa Seitenband.","In Forellenteichen, Seen und Flüssen mit Besatz, meist oberflächennah."],
- aesche:["Schlanke Salmonidenart mit großer Rückenflosse.","In schnell flenden, klaren Flüssen über Kiesgrund."],
+ aesche:["Schlanke Salmonidenart mit großer Rückenflosse.","In schnell fließenden, klaren Flüssen über Kiesgrund."],
  huchen:["Größter Raubfisch unter den Salmoniden, typisch für die Donau.","In tiefen Gumpen und Kolken kräftig strömender Donauzuflüsse."],
  barbe:["Strömungsliebender Grundfisch mit Barteln.","Über Kiesbänken und in Strömungsrinnen größerer Flüsse."],
  doebel:["Kräftiger Allesfresser, auch Aitel genannt.","Unter überhängenden Büschen, an Brücken und Strömungskanten."],
@@ -243,13 +291,15 @@ function infoCard(sp,state){
    <button class="ghost" onclick="toggleFavFish('${sp}')" style="width:100%;margin-top:10px">${isFav?"★ Aus Favoriten entfernen":"☆ Zu Favoriten hinzufügen"}</button></details>`;
 }
 
-function lakeInfoCard(sp,lake){
+function lakeInfoCard(sp,lake, customHotspot=null){
   const state = lake.state;
   const s = regStatus(regFor(state,sp,lake.basin),state);
   const i = INFO[sp]||["",""];
   const isFav = favs.fish.includes(sp);
   return `<details class="info ${s.level}"><summary>${fishImg(sp,56)}<div><b>${esc(SPECIES[sp])}</b> ${dotHtml(s)}<div class="mut">${esc(s.headline)} (${esc(STATES[state]||"")})</div></div></summary>
-   <p>${esc(i[0])}</p><p class="mut"><b>Wo er steht:</b> ${esc(i[1])}</p>${s.lines.map((l,k)=>`<p${k===0&&s.level!=="grey"?' style="font-weight:600"':""}>${esc(l)}</p>`).join("")}
+   <p>${esc(i[0])}</p>
+   ${customHotspot ? `<p style="color:var(--acc); font-weight:600; margin:6px 0;">📍 Hotspot an diesem Gewässer:<br><span style="color:var(--ink); font-weight:normal;">${esc(customHotspot)}</span></p>` : `<p class="mut"><b>Wo er steht:</b> ${esc(i[1])}</p>`}
+   ${s.lines.map((l,k)=>`<p${k===0&&s.level!=="grey"?' style="font-weight:600"':""}>${esc(l)}</p>`).join("")}
    <button class="ghost" onclick="toggleFavFish('${sp}')" style="width:100%;margin-top:10px">${isFav?"★ Aus Favoriten entfernen":"☆ Zu Favoriten hinzufügen"}</button></details>`;
 }
 
@@ -323,13 +373,7 @@ function render(){ picking=false; currentLake ? select(currentLake) : home(); }
 
 const brandHeader = `<div class="brand-header">
   <div class="brand-logo">
-    <svg viewBox="0 0 100 100" width="100%" height="100%">
-      <circle cx="50" cy="50" r="48" fill="#121923" stroke="#3b9cff" stroke-width="4"/>
-      <path d="M 25 50 Q 50 22 75 50 Q 50 78 25 50 Z" fill="#3b9cff" opacity="0.85"/>
-      <circle cx="65" cy="42" r="5" fill="#07090d"/>
-      <path d="M 18 64 Q 50 82 82 64" stroke="#ffc53d" stroke-width="5" fill="none" stroke-linecap="round"/>
-      <path d="M 50 16 L 50 36 M 44 36 L 56 36" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
-    </svg>
+    <img src="PHOTO-2026-10-20-08-33-55.jpg" alt="Logo" onerror="this.onerror=null; this.src='https://i.ibb.co/3s3T1k0/logo-angel.jpg'">
   </div>
   <h1>Da kann man Angeln</h1>
 </div>`;
@@ -477,15 +521,14 @@ async function select(id){
      </ul>
    </details>
 
-   <!-- Highlight-Fische mit detaillierten Info-Karten -->
+   <!-- Highlight-Fische mit spezifischen Gewässer-Hotspots -->
    <h3>⭐ Highlight-Fische & Hotspots</h3>
-   ${lakeInfoCard("hecht", lake)}
-   ${lakeInfoCard("barsch", lake)}
+   ${lakeDetail.highlights.map(item => lakeInfoCard(item.sp, lake, item.hotspot)).join("")}
 
    ${loadErr?`<p class="err">Daten konnten nicht geladen werden: ${esc(loadErr)}</p>`:""}
    ${SPECIAL[lake.id]?`<div class="note">${esc(SPECIAL[lake.id])}</div>`:""}
    
-   <h3>Fischarten (Schonzeiten & Details)</h3>
+   <h3>Alle Fischarten im Gewässer</h3>
    ${rows.map(([sp,a])=>`
      ${lakeInfoCard(sp, lake)}
    `).join("")}
