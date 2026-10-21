@@ -82,6 +82,7 @@ const markers = {};
 let mode = "lake", fishSel = null;
 let REG = [];
 let myState = (()=>{try{return localStorage.getItem("myState")||"BY"}catch(e){return "BY"}})();
+let filterState = "";
 
 let liveWeather = { temp: "--", windSpeed: "--", windDir: "N", pressure: "--", rain: "--", index: "--", bait: "Keine Daten", action: "--", source: "Lade..." };
 let wxCache = { k: "", t: 0 };
@@ -460,6 +461,17 @@ async function loadLakes(){
   }
 }
 
+async function deleteCatch(catchId) {
+  if(!confirm("Diesen Fang wirklich löschen?")) return;
+  const {error} = await sb.from("catches").delete().eq("id", catchId).eq("user_id", user.id);
+  if(error) {
+    alert("Fehler beim Löschen: " + error.message);
+  } else {
+    myselfHome();
+  }
+}
+window.deleteCatch = deleteCatch;
+
 function render(){ picking=false; currentLake ? select(currentLake) : home(); }
 
 const brandHeader = `<div class="brand-header">
@@ -548,18 +560,42 @@ function home(filter=""){
      📍 Am Gewässer? GPS-Standort erkennen (bis 25 km)
    </button>
 
-   <p class="mut">${LAKES.length} Gewässer. Wähle eines auf der Karte oder suche hier.</p>
+   <label class="mut" for="stateFilter" style="margin-top:6px;display:block">Nach Bundesland filtern</label>
+   <select id="stateFilter" style="width:100%;margin:4px 0 10px">
+     <option value="">Alle Bundesländer (${LAKES.length} Gewässer)</option>
+     ${Object.entries(STATES).map(([k,v])=>`<option value="${k}"${k===filterState?" selected":""}>${v}</option>`).join("")}
+   </select>
+
+   <p class="mut">Wähle eines auf der Karte oder suche hier.</p>
    ${GMAPS_KEY?"":`<div class="note">Noch kein Google-Maps-Key eingetragen (<code>GMAPS_KEY</code>).</div>`}
    <form onsubmit="return false"><input id="q" type="search" placeholder="Gewässer suchen" value="${esc(filter)}" autocomplete="off"></form>
    <div class="list" id="lakes"></div>
    ${user?`<button class="ghost" id="addLake" style="width:100%;margin-top:12px">Neues Gewässer hinzufügen</button>`:`<p class="mut" style="margin-top:12px">Melde dich an, um neue Gewässer hinzuzufügen.</p>`}`;
+
   const draw = ()=>{
     const q = document.getElementById("q").value.toLowerCase();
-    document.getElementById("lakes").innerHTML = LAKES.filter(l=>l.name.toLowerCase().includes(q)).slice(0,60)
-      .map(l=>`<button data-id="${esc(l.id)}">${esc(l.name)} <span class="mut">${TYPES[l.type]||""}</span></button>`).join("") || `<p class="mut">Nichts gefunden.</p>`;
+    const sf = document.getElementById("stateFilter").value;
+    filterState = sf;
+
+    const filtered = LAKES.filter(l => {
+      const matchText = l.name.toLowerCase().includes(q);
+      const matchState = sf ? l.state === sf : true;
+      return matchText && matchState;
+    });
+
+    document.getElementById("lakes").innerHTML = filtered.slice(0,60)
+      .map(l=>`<button data-id="${esc(l.id)}">${esc(l.name)} <span class="mut">${TYPES[l.type]||""} (${STATES[l.state]||l.state})</span></button>`).join("") || `<p class="mut">Nichts gefunden.</p>`;
+    
     document.querySelectorAll("#lakes [data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id));
+    
+    const activeIds = new Set(filtered.map(l=>l.id));
+    highlightMarkers(activeIds);
   };
-  document.getElementById("q").oninput = draw; draw();
+
+  document.getElementById("q").oninput = draw;
+  document.getElementById("stateFilter").onchange = draw;
+  draw();
+
   const a = document.getElementById("addLake"); if(a) a.onclick = showAdd;
   bindAuth(); bindTabs();
 }
@@ -579,7 +615,6 @@ async function myselfHome(){
    <div class="tiles" id="favFish"></div>`;
   bindAuth(); bindTabs();
 
-  // Favoriten Gewässer & Fische rendern
   const favLakeList = LAKES.filter(l=>favs.lakes.includes(l.id));
   document.getElementById("favLakes").innerHTML = favLakeList.length ? favLakeList.map(l=>`<button data-id="${esc(l.id)}">⭐ ${esc(l.name)} <span class="mut">${TYPES[l.type]||""}</span></button>`).join("") : `<p class="mut">Noch keine Gewässer favorisiert.</p>`;
   document.querySelectorAll("#favLakes [data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id));
@@ -590,18 +625,18 @@ async function myselfHome(){
     mode="fish"; fishSel=b.dataset.sp; home();
   });
 
-  // Letzte Fänge & persönliche Rekorde laden (falls User angemeldet)
   if(user && sb) {
     try {
-      const {data: catchesData} = await sb.from("catches").select("species,lure,length_cm,created_at,lake").eq("user_id", user.id).order("created_at", {ascending: false}).limit(20);
+      const {data: catchesData} = await sb.from("catches").select("id,species,lure,length_cm,created_at,lake").eq("user_id", user.id).order("created_at", {ascending: false}).limit(50);
       if(catchesData && catchesData.length > 0) {
-        // Letzte Fänge
-        document.getElementById("myRecentCatches").innerHTML = catchesData.slice(0,5).map(c => {
+        document.getElementById("myRecentCatches").innerHTML = catchesData.slice(0,10).map(c => {
           const lObj = LAKES.find(l=>l.id===c.lake);
-          return `<div class="sp"><b>${esc(SPECIES[c.species]||c.species)}</b> ${c.length_cm?`(${c.length_cm} cm)`:""} — <span class="mut">${lObj?esc(lObj.name):"Gewässer"}</span><br><span class="mut">Köder: ${esc(c.lure||"Keine Angabe")} | Datum: ${fmt(c.created_at)}</span></div>`;
+          return `<div class="sp" style="display:flex; justify-content:space-between; align-items:center;">
+            <div><b>${esc(SPECIES[c.species]||c.species)}</b> ${c.length_cm?`(${c.length_cm} cm)`:""} — <span class="mut">${lObj?esc(lObj.name):"Gewässer"}</span><br><span class="mut">Köder: ${esc(c.lure||"Keine Angabe")} | Datum: ${fmt(c.created_at)}</span></div>
+            <button class="ghost" onclick="deleteCatch('${c.id}')" style="padding:4px 8px;font-size:0.75rem;color:var(--warn);border-color:var(--warn);">Löschen</button>
+          </div>`;
         }).join("");
 
-        // Rekorde filtern (max Länge pro Fischart)
         const recs = {};
         catchesData.forEach(c => {
           if(c.length_cm && (!recs[c.species] || c.length_cm > recs[c.species].length_cm)) {
@@ -669,7 +704,6 @@ async function select(id){
      </ul>
    </details>
 
-   <!-- Rekord-Sektion für das Gewässer -->
    <details class="info" style="border-left-color: var(--warn);">
      <summary>
        <span style="font-size:1.4rem">🏆</span>
