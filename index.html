@@ -537,19 +537,6 @@ async function initDefaultWeather() {
   }
 }
 
-async function deleteCatch(catchId) {
-  if(!confirm("Möchtest du diesen Fang wirklich löschen?")) return;
-  if(sb && user) {
-    const {error} = await sb.from("catches").delete().eq("id", catchId).eq("user_id", user.id);
-    if(error) {
-      alert("Fehler beim Löschen: " + error.message);
-      return;
-    }
-  }
-  if(mode === "myself") myselfHome();
-  else if(currentLake) select(currentLake);
-}
-
 function home(filter=""){
   currentLake = null; picking = false; resetMarkers();
   if(mode==="fish"){fishHome();return}
@@ -592,6 +579,7 @@ async function myselfHome(){
    <div class="tiles" id="favFish"></div>`;
   bindAuth(); bindTabs();
 
+  // Favoriten Gewässer & Fische rendern
   const favLakeList = LAKES.filter(l=>favs.lakes.includes(l.id));
   document.getElementById("favLakes").innerHTML = favLakeList.length ? favLakeList.map(l=>`<button data-id="${esc(l.id)}">⭐ ${esc(l.name)} <span class="mut">${TYPES[l.type]||""}</span></button>`).join("") : `<p class="mut">Noch keine Gewässer favorisiert.</p>`;
   document.querySelectorAll("#favLakes [data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id));
@@ -602,18 +590,18 @@ async function myselfHome(){
     mode="fish"; fishSel=b.dataset.sp; home();
   });
 
+  // Letzte Fänge & persönliche Rekorde laden (falls User angemeldet)
   if(user && sb) {
     try {
-      const {data: catchesData} = await sb.from("catches").select("id,species,lure,length_cm,created_at,lake").eq("user_id", user.id).order("created_at", {ascending: false}).limit(20);
+      const {data: catchesData} = await sb.from("catches").select("species,lure,length_cm,created_at,lake").eq("user_id", user.id).order("created_at", {ascending: false}).limit(20);
       if(catchesData && catchesData.length > 0) {
+        // Letzte Fänge
         document.getElementById("myRecentCatches").innerHTML = catchesData.slice(0,5).map(c => {
           const lObj = LAKES.find(l=>l.id===c.lake);
-          return `<div class="sp" style="display:flex; justify-content:space-between; align-items:center;">
-            <div><b>${esc(SPECIES[c.species]||c.species)}</b> ${c.length_cm?`(${c.length_cm} cm)`:""} — <span class="mut">${lObj?esc(lObj.name):"Gewässer"}</span><br><span class="mut">Köder: ${esc(c.lure||"Keine Angabe")} | Datum: ${fmt(c.created_at)}</span></div>
-            <button class="ghost" onclick="deleteCatch('${c.id}')" style="padding:4px 8px; font-size:0.75rem; border-color:#ff4d4f; color:#ff4d4f;">Löschen</button>
-          </div>`;
+          return `<div class="sp"><b>${esc(SPECIES[c.species]||c.species)}</b> ${c.length_cm?`(${c.length_cm} cm)`:""} — <span class="mut">${lObj?esc(lObj.name):"Gewässer"}</span><br><span class="mut">Köder: ${esc(c.lure||"Keine Angabe")} | Datum: ${fmt(c.created_at)}</span></div>`;
         }).join("");
 
+        // Rekorde filtern (max Länge pro Fischart)
         const recs = {};
         catchesData.forEach(c => {
           if(c.length_cm && (!recs[c.species] || c.length_cm > recs[c.species].length_cm)) {
@@ -647,7 +635,7 @@ async function select(id){
 
   if(window.map){map.panTo({lat:lake.lat,lng:lake.lng});map.setZoom(11)}
   const [c,r] = await Promise.all([
-    sb.from("catches").select("id,species,lure,length_cm,created_at,user_id").eq("lake",id).limit(5000),
+    sb.from("catches").select("species,lure,created_at").eq("lake",id).limit(5000),
     sb.from("reports").select("species,type").eq("lake",id).limit(5000)]);
   if(currentLake!==id) return;
   const loadErr = (c.error||r.error||{}).message, catches=c.data||[], reports=r.data||[];
@@ -681,6 +669,7 @@ async function select(id){
      </ul>
    </details>
 
+   <!-- Rekord-Sektion für das Gewässer -->
    <details class="info" style="border-left-color: var(--warn);">
      <summary>
        <span style="font-size:1.4rem">🏆</span>
@@ -701,13 +690,6 @@ async function select(id){
    ${rows.map(([sp,a])=>`
      ${lakeInfoCard(sp, lake)}
    `).join("")}
-
-   <h3>Gemeldete Fänge an diesem Gewässer</h3>
-   <div class="list" style="margin-bottom:14px;">
-     ${catches.length ? catches.map(c => `<div class="sp" style="display:flex; justify-content:space-between; align-items:center;">
-       <div><b>${esc(SPECIES[c.species] \vert{}\vert{} c.species)}</b>${c.length_cm ? `(${c.length_cm} cm)` : ''}<br><span class="mut">Köder: ${esc(c.lure || 'Keiner')} • ${fmt(c.created_at)}</span></div>${user && c.user_id === user.id ? `<button class="ghost" onclick="deleteCatch('${c.id}')" style="padding:4px 8px; font-size:0.75rem; border-color:#ff4d4f; color:#ff4d4f;">Löschen</button>` : ''}
-     </div>`).join('') : '<p class="mut">Noch keine Fänge gemeldet.</p>'}
-   </div>
 
    ${user?`<h3>Fang eintragen</h3>
    <form id="catchForm"><select name="species" aria-label="Fischart">${opts}</select>
@@ -770,3 +752,100 @@ async function showFish(){
     .sort((a,b)=>b.n-a.n||(b.native-a.native)||a.l.name.localeCompare(b.l.name));
   const total=(c.data||[]).length, lure=topLure(c.data||[]);
   highlightMarkers(new Set(rows.map(x=>x.l.id)));
+  if(window.map&&rows.length){const b=new google.maps.LatLngBounds();rows.forEach(x=>b.extend({lat:x.l.lat,lng:x.l.lng}));map.fitBounds(b,60)}
+  box.innerHTML = `${infoCard(sp,myState)}<h3>${esc(SPECIES[sp])}: ${rows.length} Gewässer</h3>
+   <p class="mut">${total} gemeldete Fänge in der Community${lure?`, beliebtester Köder: ${esc(lure)}`:""}</p>
+   <div class="list">${rows.map(x=>`<button data-id="${esc(x.l.id)}">${dotHtml(regStatus(regFor(x.l.state,sp,x.l.basin),x.l.state))} <b>${esc(x.l.name)}</b> <span class="mut">${TYPES[x.l.type]||""}</span><br>
+     <span class="mut">${x.n>0?`${freq(x.n)}, ${x.n} Fänge, letzter Fang ${fmt(x.last)}${x.lure?`, Top-Köder: ${esc(x.lure)}`:""}`
+       :x.native?"Heimisch, noch kein Fang gemeldet":"Besatz gemeldet, noch kein Fang"}${x.gone?" (auch als verschwunden gemeldet)":""}</span></button>`).join("")
+     || '<p class="mut">Für diese Fischart ist noch kein Gewässer hinterlegt.</p>'}</div>`;
+  box.querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id));
+}
+
+function showAdd(){
+  currentLake = null; picking = true; picked = null;
+  panel.innerHTML = `${authBar()}${weatherWidgetHtml()}<button class="ghost" id="cancel">Abbrechen</button>
+   <h2 style="margin-top:14px">Neues Gewässer</h2>
+   <p class="mut">Klicke auf die Karte, um die Position zu setzen, oder nutze deinen Standort.</p>
+   <form id="addForm">
+     <input name="name" placeholder="Name, z. B. Kirchsee" required minlength="2" maxlength="80">
+     <select name="type" aria-label="Typ">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select>
+     <select name="state" required aria-label="Bundesland">${Object.entries(STATES).map(([k,v])=>`<option value="${k}"${k===myState?" selected":""}>${v}</option>`).join("")}</select>
+     <select name="basin" aria-label="Flussgebiet"><option value="">Flussgebiet (optional)</option>${Object.entries(BASINS).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select>
+     <p class="mut" id="pos">Position: noch nicht gesetzt</p>
+     <button type="button" class="ghost" id="geo">Meinen Standort verwenden</button>
+     <h3 style="margin:8px 0 0">Heimische Fischarten (optional)</h3>
+     <div class="chk">${speciesOpts.map(([k,v])=>`<label><input type="checkbox" name="sp" value="${k}">${esc(v)}</label>`).join("")}</div>
+     <button>Gewässer speichern</button><p class="err" id="addErr"></p></form>`;
+  bindAuth();
+  document.getElementById("cancel").onclick = ()=>{clearTmp();home()};
+  document.getElementById("geo").onclick = ()=>navigator.geolocation&&navigator.geolocation.getCurrentPosition(
+    p=>setPicked(p.coords.latitude,p.coords.longitude,true), ()=>document.getElementById("addErr").textContent="Standort nicht verfügbar.");
+  document.getElementById("addForm").onsubmit = async e=>{
+    e.preventDefault(); const f=e.target, err=document.getElementById("addErr");
+    if(!picked){err.textContent="Bitte zuerst eine Position wählen.";return}
+    const {data,error} = await sb.from("waterbodies").insert({name:f.name.value.trim(),type:f.type.value,state:f.state.value,basin:f.basin.value||null,lat:picked.lat,lng:picked.lng,
+      base:[...f.querySelectorAll('input[name=sp]:checked')].map(i=>i.value)}).select("id").single();
+    if(error){err.textContent=error.message.includes("check")?"Position liegt außerhalb von Deutschland.":error.message;return}
+    clearTmp(); await loadLakes(); select(data.id);
+  };
+}
+function setPicked(lat,lng,pan){
+  picked = {lat:+lat.toFixed(5),lng:+lng.toFixed(5)};
+  const el = document.getElementById("pos"); if(el) el.textContent = `Position: ${picked.lat}, ${picked.lng}`;
+  if(window.map){
+    clearTmp();
+    tmpMarker = new google.maps.Marker({position:picked,map,icon:dot("#ffc53d")});
+    if(pan){map.panTo(picked);map.setZoom(13)}
+  }
+}
+function clearTmp(){if(tmpMarker){tmpMarker.setMap(null);tmpMarker=null}picking=false}
+
+/* ============ GOOGLE MAPS ============ */
+const dot = c=>({path:google.maps.SymbolPath.CIRCLE,scale:8,fillColor:c,fillOpacity:1,strokeColor:"#ffffff",strokeWeight:2});
+function syncMarkers(){
+  if(!window.map) return;
+  LAKES.forEach(l=>{ if(markers[l.id]) return;
+    const m = new google.maps.Marker({position:{lat:l.lat,lng:l.lng},map,title:l.name,icon:dot("#3b9cff")});
+    m.addListener("click",()=>{ if(!picking) select(l.id) }); markers[l.id]=m; });
+}
+
+window.initMap = function(){
+  window.map = new google.maps.Map(document.getElementById("map"),{
+    center:{lat:48.1371, lng:11.5754},
+    zoom:7,
+    mapTypeId:"hybrid",
+    mapTypeControl:true,
+    streetViewControl:false,
+    fullscreenControl:false
+  });
+  map.addListener("click",e=>{ if(picking) setPicked(e.latLng.lat(),e.latLng.lng(),false) });
+  syncMarkers();
+};
+
+if(GMAPS_KEY){
+  const s=document.createElement("script");
+  s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GMAPS_KEY)}&callback=initMap&loading=async`;
+  s.async=true; document.head.appendChild(s);
+} else document.getElementById("map").innerHTML='<p class="mut" style="padding:24px">Karte erscheint, sobald ein Google-Maps-Key eingetragen ist.</p>';
+
+if(sb){
+  sb.auth.onAuthStateChange(async (_e,session)=>{
+    user=session?session.user:null; 
+    if(user) await loadCloudFavs();
+    if(!picking) render();
+  });
+  sb.auth.getSession().then(async({data})=>{
+    user=data.session?data.session.user:null; 
+    if(user) await loadCloudFavs();
+    await loadLakes(); 
+    await initDefaultWeather();
+    render();
+  });
+} else {
+  initDefaultWeather();
+  home();
+}
+</script>
+</body>
+</html>
