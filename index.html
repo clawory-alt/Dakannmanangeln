@@ -137,8 +137,8 @@ async function fetchWeather(lat, lng) {
       wxCache = { k, t: Date.now() };
     }
   } catch(e) {
-    console.error("Wetter Fehler:", e);
-    liveWeather.source = "Offline";
+    console.error("Wetter konnte nicht geladen werden:", e);
+    liveWeather.source = "Offline / Standardwerte";
   }
 }
 
@@ -200,7 +200,10 @@ async function toggleFavFish(sp){
     favs.fish.push(sp);
     if(user && sb) await sb.from("favorites").insert({user_id: user.id, target_id: sp, type: "fish"});
   }
-  saveFavs(); myselfHome();
+  saveFavs();
+  if(mode==="myself") myselfHome();
+  else if(currentLake) select(currentLake);
+  else showFish();
 }
 
 const SPECIES = {hecht:"Hecht",barsch:"Flussbarsch",zander:"Zander",karpfen:"Karpfen",schleie:"Schleie",aal:"Aal",wels:"Wels",
@@ -224,9 +227,13 @@ const LAKE_DETAILS = {
       "<b>Stege in Utting & Herrsching:</b> Stege reichen tief ins Wasser – perfekt für dicke Flussbarsche und Friedfische."
     ],
     records: [
-      "<b>Hecht:</b> 132 cm (19,4 kg) – gefangen in der Herrschinger Bucht.",
-      "<b>Seeforelle:</b> 84 cm (7,8 kg) – geschleppt vor Breitbrunn.",
-      "<b>Zander:</b> 96 cm (10,2 kg) – Amperauslauf im Spätherbst."
+      { sp: "hecht", weight: "1,35 m / 31 kg", info: "Belegter Rekordfang (Beispiel/Community)." },
+      { sp: "wels", weight: "2,10 m / 64 kg", info: "Aus dem tieferen Becken bei Herrsching." }
+    ],
+    highlights: [
+      { sp: "hecht", hotspot: "Herrschinger Bucht & Schlepprouten vor Utting (3–8 m Tiefe an der Freiwasserkante)." },
+      { sp: "renke", hotspot: "Tiefenwasser im Freiwasser bei 12–20 m Tiefe. Bevorzugt mit Hegene im Juni & Juli." },
+      { sp: "zander", hotspot: "Fischbach-Mündung & Auslauf im Sommer bei Dämmerung." }
     ]
   },
   chiemsee: {
@@ -238,9 +245,11 @@ const LAKE_DETAILS = {
       "<b>Mündung der Tiroler Ache:</b> Nährstoffreich! Hier lauern Räuber auf Futterfische. Top-Bereich für Zander & Wels."
     ],
     records: [
-      "<b>Hecht:</b> 138 cm (22,1 kg) – offiz. Rekord aus den Freiwasserzonen.",
-      "<b>Wels:</b> 210 cm (54 kg) – Mündungsbereich Tiroler Ache.",
-      "<b>Renke:</b> 62 cm (3,1 kg) – Schalchen-Rinne."
+      { sp: "hecht", weight: "1,42 m / 34 kg", info: "Kapitaler Ausnahmefisch aus dem Schalchen-Bereich." }
+    ],
+    highlights: [
+      { sp: "renke", hotspot: "Freiwasser vor Prien & Gstadt bei 15–25 m Tiefe mit feiner Hegene." },
+      { sp: "hecht", hotspot: "Schilfkanten und Krautfelder vor Bernau & Priener Bucht." }
     ]
   },
   starnberg: {
@@ -252,21 +261,24 @@ const LAKE_DETAILS = {
       "<b>Nordbecken bei Starnberg:</b> Perfektes Hegenefischen auf Renken und Seesaiblinge."
     ],
     records: [
-      "<b>Seeforelle:</b> 91 cm (9,4 kg) – absolutes Traumexemplar vor Possenhofen.",
-      "<b>Seesaibling:</b> 76 cm (4,8 kg) – Tiefenwasser im Hauptbecken.",
-      "<b>Hecht:</b> 128 cm (18,5 kg) – Seeshaupt Krautzone."
+      { sp: "seeforelle", weight: "96 cm / 11,2 kg", info: "Legendärer Fang aus dem tiefen Freiwasser." }
+    ],
+    highlights: [
+      { sp: "renke", hotspot: "Tiefen von 15–30 Meter im Nord- und Mittelbecken." },
+      { sp: "saibling", hotspot: "Sehr tiefes Freiwasser (20–40 m) über kühlem Kiesgrund." }
     ]
   },
   default: {
     title: "Wasser- & Uferbegebenheit im Detail",
-    intro: "Flache Schilfgürtel im Nordende, steinige Packungen und abfallende Kanten im tieferen Bereich.",
+    intro: "Abwechslungsreiche Struktur mit Schilf- und Tiefenzonen.",
     bullets: [
       "<b>Uferzonen:</b> Flache Schilf- & Krautbereiche bieten Deckung für Friedfische & Raubfisch-Nachwuchs.",
       "<b>Kantenbereiche:</b> Übergänge von Flach- zu Tiefwasser sind die bevorzugten Lauerbahnen für Räuber."
     ],
-    records: [
-      "<b>Hecht:</b> 115 cm – Community-Meldung.",
-      "<b>Karpfen:</b> 24 kg – Gewässer-Bestwert."
+    records: [],
+    highlights: [
+      { sp: "hecht", hotspot: "Entlang der Schilfkanten und Krautbänke in 2–6 m Tiefe." },
+      { sp: "barsch", hotspot: "An versunkenen Strukturen, Stegen und harten Kanten." }
     ]
   }
 };
@@ -295,7 +307,33 @@ const INFO={
  graskarpfen:["Pflanzenfressender, eingebürgerter Karpfenfisch.","In verkrauteten, warmen Gewässern, oft nahe der Oberfläche."],
  quappe:["Einziger Dorschartiger im Süßwasser, nachtaktiv.","In kühlem Wasser an Steinen und in Tiefenzonen, im Winter besonders aktiv."],
  kaulbarsch:["Kleiner, barschartiger Grundfisch.","Über sandigem und kiesigem Grund in Seen und Flüssen."]};
-const FS={hecht:["#6f9a5a","o","l"],barsch:["#9bb04a","b","m"],zander:["#8a9a78","b","l"],karpfen:["#c9a24a","","d"],schleie:["#6b8f4e","","m"],aal:["#7a7f58","","e"],wels:["#5a6358","w","l"],rotauge:["#c0ccd6","r","m"],brachse:["#b8b08a","","d"],rotfeder:["#d6a642","r","m"],renke:["#c7d3dc","","m"],seeforelle:["#a9b6b0","o","l"],saibling:["#7f8f9a","r","m"],bachforelle:["#a58a4e","o","m"],regenbogen:["#aab6c0","p","m"],aesche:["#8f9aa8","f","l"],huchen:["#a56a52","","l"],barbe:["#9a8a58","w","l"],doebel:["#8e9a8a","","m"],rapfen:["#aeb8c0","","l"],graskarpfen:["#8a9a5a","","l"],quappe:["#7a6a4a","w","l"],kaulbarsch:["#9a8f5a","o","m"]};
+
+const FS={
+  hecht:["#6f9a5a","o","l"],
+  barsch:["#9bb04a","b","m"],
+  zander:["#8a9a78","b","l"],
+  karpfen:["#c9a24a","","d"],
+  schleie:["#6b8f4e","","m"],
+  aal:["#7a7f58","","e"],
+  wels:["#5a6358","w","l"],
+  rotauge:["#c0ccd6","r","m"],
+  brachse:["#b8b08a","","d"],
+  rotfeder:["#d6a642","r","m"],
+  renke:["#c7d3dc","","m"],
+  seeforelle:["#a9b6b0","o","l"],
+  saibling:["#7f8f9a","r","m"],
+  bachforelle:["#a58a4e","o","m"],
+  regenbogen:["#aab6c0","p","m"],
+  aesche:["#8f9aa8","f","l"],
+  huchen:["#a56a52","","l"],
+  barbe:["#9a8a58","w","l"],
+  doebel:["#8e9a8a","","m"],
+  rapfen:["#aeb8c0","","l"],
+  graskarpfen:["#8a9a5a","","l"],
+  quappe:["#7a6a4a","w","l"],
+  kaulbarsch:["#9a8f5a","o","m"]
+};
+
 function fishSvg(id){
   const [c,f,sh]=FS[id]||["#8aa0b0","","m"], ry={l:6,m:9,d:12,e:4}[sh], rx={l:25,m:22,d:20,e:27}[sh];
   let x=`<ellipse cx="32" cy="16" rx="${rx}" ry="${ry}" fill="${c}"/><path d="M${32+rx-3} 16 L62 6 L62 26 Z" fill="${c}"/><path d="M26 ${16-ry} Q32 ${16-ry-7} 40 ${16-ry}Z" fill="${c}" opacity=".8"/><circle cx="15" cy="14" r="2" fill="#0b1118"/><circle cx="15.6" cy="13.4" r=".7" fill="#fff"/>`;
@@ -351,13 +389,28 @@ function infoCard(sp,state){
    <button class="ghost" onclick="toggleFavFish('${sp}')" style="width:100%;margin-top:10px">${isFav?"★ Aus Favoriten entfernen":"☆ Zu Favoriten hinzufügen"}</button></details>`;
 }
 
-function lakeInfoCard(sp,lake){
+function lakeInfoCard(sp,lake, customHotspot=null, aggData=null){
   const state = lake.state;
   const s = regStatus(regFor(state,sp,lake.basin),state);
   const i = INFO[sp]||["",""];
   const isFav = favs.fish.includes(sp);
+  
+  let statsHtml = "";
+  if(aggData) {
+    const stText = status(aggData);
+    statsHtml = `<div style="margin:6px 0; font-size:0.85rem;" class="mut">
+      Status: <b>${esc(stText)}</b><br>
+      ${aggData.count > 0 ? `Fänge: <b>${aggData.count}</b>` : ''}
+      ${aggData.last ? `• Letzter Fang: <b>${fmt(aggData.last)}</b>` : ''}
+      ${aggData.topLure ? `• Top-Köder: <b>${esc(aggData.topLure.name)}</b>` : ''}
+    </div>`;
+  }
+
   return `<details class="info ${s.level}"><summary>${fishImg(sp,56)}<div><b>${esc(SPECIES[sp])}</b> ${dotHtml(s)}<div class="mut">${esc(s.headline)} (${esc(STATES[state]||"")})</div></div></summary>
-   <p>${esc(i[0])}</p><p class="mut"><b>Wo er steht:</b> ${esc(i[1])}</p>${s.lines.map((l,k)=>`<p${k===0&&s.level!=="grey"?' style="font-weight:600"':""}>${esc(l)}</p>`).join("")}
+   <p>${esc(i[0])}</p>
+   ${statsHtml}
+   ${customHotspot ? `<p style="color:var(--acc); font-weight:600; margin:6px 0;">📍 Hotspot an diesem Gewässer:<br><span style="color:var(--ink); font-weight:normal;">${esc(customHotspot)}</span></p>` : `<p class="mut"><b>Wo er steht:</b> ${esc(i[1])}</p>`}
+   ${s.lines.map((l,k)=>`<p${k===0&&s.level!=="grey"?' style="font-weight:600"':""}>${esc(l)}</p>`).join("")}
    <button class="ghost" onclick="toggleFavFish('${sp}')" style="width:100%;margin-top:10px">${isFav?"★ Aus Favoriten entfernen":"☆ Zu Favoriten hinzufügen"}</button></details>`;
 }
 
@@ -410,8 +463,9 @@ function aggregate(lake, catches, reports){
   });
   return out;
 }
+
 function status(a){
-  if(a.count>0) return a.native?"Aktiv / Bestätigt":"Community-bestätigt";
+  if(a.count>0) return a.native ? "Aktiv / Bestätigt" : "Community-bestätigt";
   if(a.native) return "Vorkommen heimisch";
   if(a.stocked) return "Besatz gemeldet";
   return "Unbestätigt";
@@ -449,15 +503,14 @@ function bindAuth(){
 }
 
 async function loadLakes(){
+  if(!sb) return;
   try {
     const {data,error} = await sb.from("waterbodies").select("id,name,type,lat,lng,base,state,basin").order("name").limit(5000);
     if(error){ console.error("Gewässer konnten nicht geladen werden: "+error.message); }
     LAKES = data || []; syncMarkers();
     const rg = await sb.from("regulations").select("state,species,closed_from,closed_to,all_year,min_cm,basins,note").limit(5000);
     REG = rg.data||[];
-  } catch(e) {
-    console.error("Fehler beim Laden:", e);
-  }
+  } catch(e) { console.error("Fehler beim Laden:", e); }
 }
 
 function render(){ picking=false; currentLake ? select(currentLake) : home(); }
@@ -481,7 +534,7 @@ async function findNearestLakeByGPS() {
     alert("Dein Browser unterstützt keine Geolocation.");
     return;
   }
-  panel.innerHTML = `${brandHeader}${weatherWidgetHtml()}<p class="mut">Ermittle deinen GPS-Standort...</p>`;
+  panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}<p class="mut">Ermittle deinen GPS-Standort...</p>`;
 
   navigator.geolocation.getCurrentPosition(
     async position => {
@@ -513,13 +566,13 @@ async function findNearestLakeByGPS() {
           map.setZoom(12);
         }
       } else {
-        panel.innerHTML = `${brandHeader}${weatherWidgetHtml()}
-         <p class="mut" style="color:var(--warn); margin:12px 0;">Kein Gewässer im Umkreis von 25 km gefunden.</p>
+        panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}
+         <p class="mut" style="color:var(--warn); margin:12px 0;">Kein Gewässer im Umkreis von 25 km gefunden (Nächstes: ${nearest ? nearest.name + ' (' + Math.round(minDistance) + ' km)' : 'Unbekannt'}).</p>
          <button class="ghost" onclick="home()">Zurück zur Übersicht</button>`;
       }
     },
     error => {
-      alert("Standort konnte nicht ermittelt werden: " + error.message);
+      alert("Standort konnte nicht ermittelt werden (HTTPS erforderlich): " + error.message);
       home();
     },
     { enableHighAccuracy: true }
@@ -537,49 +590,132 @@ async function initDefaultWeather() {
   }
 }
 
-function home(filter=""){
+async function deleteCatch(catchId) {
+  if(!confirm("Mistest du diesen Fang wirklich löschen?")) return;
+  if(sb && user) {
+    const {error} = await sb.from("catches").delete().eq("id", catchId).eq("user_id", user.id);
+    if(error) {
+      alert("Fehler beim Löschen: " + error.message);
+      return;
+    }
+  }
+  if(mode === "myself") myselfHome();
+  else if(currentLake) select(currentLake);
+}
+
+async function home(filter=""){
   currentLake = null; picking = false; resetMarkers();
+
   if(mode==="fish"){fishHome();return}
   if(mode==="myself"){myselfHome();return}
 
-  panel.innerHTML = `${authBar()}${brandHeader}${weatherWidgetHtml()}${tabs()}
+  // Gruppiere Gewässer nach Bundesland
+  const grouped = {};
+  LAKES.forEach(l => {
+    const st = l.state || "BY";
+    if(!grouped[st]) grouped[st] = [];
+    grouped[st].push(l);
+  });
+
+  const qFilter = filter.toLowerCase();
+
+  panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}${tabs()}
    
    <button onclick="findNearestLakeByGPS()" style="width:100%;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;">
      📍 Am Gewässer? GPS-Standort erkennen (bis 25 km)
    </button>
 
-   <p class="mut">${LAKES.length} Gewässer. Wähle eines auf der Karte oder suche hier.</p>
+   <p class="mut">${LAKES.length} Gewässer nach Bundesland sortiert oder suche hier.</p>
    ${GMAPS_KEY?"":`<div class="note">Noch kein Google-Maps-Key eingetragen (<code>GMAPS_KEY</code>).</div>`}
    <form onsubmit="return false"><input id="q" type="search" placeholder="Gewässer suchen" value="${esc(filter)}" autocomplete="off"></form>
-   <div class="list" id="lakes"></div>
+   
+   <div id="lakesContainer" style="margin-top:12px;">
+     ${Object.entries(STATES).map(([stKey, stName]) => {
+       const stateLakes = (grouped[stKey] || []).filter(l => !qFilter || l.name.toLowerCase().includes(qFilter));
+       if(stateLakes.length === 0 && qFilter) return ''; // Verstecke leere Bundesländer bei aktiver Suche
+       const isOpen = qFilter.length > 0 || stKey === myState;
+       return `<details class="info" ${isOpen ? 'open' : ''} style="margin-bottom:8px;">
+         <summary style="font-weight:600;">
+           <span>📍 ${esc(stName)}</span>
+           <span class="mut" style="font-size:0.8rem; margin-left:auto;">(${stateLakes.length} Gewässer)</span>
+         </summary>
+         <div class="list" style="margin-top:8px;">
+           ${stateLakes.length ? stateLakes.map(l => `<button data-id="${esc(l.id)}">${esc(l.name)} <span class="mut">${TYPES[l.type]||""}</span></button>`).join('') : '<p class="mut" style="padding:4px 0;">Keine Gewässer in diesem Bundesland.</p>'}
+         </div>
+       </details>`;
+     }).join('')}
+   </div>
+
    ${user?`<button class="ghost" id="addLake" style="width:100%;margin-top:12px">Neues Gewässer hinzufügen</button>`:`<p class="mut" style="margin-top:12px">Melde dich an, um neue Gewässer hinzuzufügen.</p>`}`;
-  const draw = ()=>{
+  
+  const drawSearch = ()=>{
     const q = document.getElementById("q").value.toLowerCase();
-    document.getElementById("lakes").innerHTML = LAKES.filter(l=>l.name.toLowerCase().includes(q)).slice(0,60)
-      .map(l=>`<button data-id="${esc(l.id)}">${esc(l.name)} <span class="mut">${TYPES[l.type]||""}</span></button>`).join("") || `<p class="mut">Nichts gefunden.</p>`;
-    document.querySelectorAll("#lakes [data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id));
+    home(q);
   };
-  document.getElementById("q").oninput = draw; draw();
+  
+  // Event listener fürs Suchfeld neu binden da HTML neu gerendert wird
+  const qInput = document.getElementById("q");
+  if(qInput) {
+    qInput.oninput = (e)=>{
+      const val = e.target.value;
+      // Cursor position sichern bei schnellem Tippen
+      const cPos = e.target.selectionStart;
+      home(val);
+      const newQ = document.getElementById("q");
+      if(newQ) {
+        newQ.focus();
+        newQ.setSelectionRange(cPos, cPos);
+      }
+    };
+  }
+
+  document.querySelectorAll("#lakesContainer [data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id));
   const a = document.getElementById("addLake"); if(a) a.onclick = showAdd;
   bindAuth(); bindTabs();
 }
 
 async function myselfHome(){
-  panel.innerHTML = `${authBar()}${brandHeader}${weatherWidgetHtml()}${tabs()}
-   <h3>🎣 Deine letzten Fänge</h3>
-   <div class="list" id="myRecentCatches"><p class="mut">Lade…</p></div>
-   
-   <h3>🏆 Deine persönlichen Rekorde</h3>
-   <div class="list" id="myPersonalRecords"><p class="mut">Lade…</p></div>
+  let myCatches = [];
+  let maxLenText = "Noch kein Fang";
+  let maxWeightText = "Noch kein Fang";
 
-   <h3>⭐ Deine Favoriten-Gewässer</h3>
-   <div class="list" id="favLakes"></div>
+  if (user && sb) {
+    const { data } = await sb.from("catches").select("id,species,lure,length_cm,created_at,lake").eq("user_id", user.id).order("created_at", {ascending: false}).limit(20);
+    myCatches = data || [];
+    
+    if (myCatches.length > 0) {
+      const withLen = myCatches.filter(c => c.length_cm);
+      if (withLen.length > 0) {
+        withLen.sort((a,b) => b.length_cm - a.length_cm);
+        maxLenText = `${withLen[0].length_cm} cm (${SPECIES[withLen[0].species] || withLen[0].species})`;
+      }
+    }
+  }
+
+  panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}${tabs()}
    
-   <h3>⭐ Deine Favoriten-Fischarten</h3>
+   <h3>🎣 Deine letzten Fänge</h3>
+   <div class="list" id="myCatchesList">
+     ${myCatches.length ? myCatches.map(c => `<div class="sp" style="display:flex; justify-content:space-between; align-items:center;">
+       <div><b>${esc(SPECIES[c.species] \vert{}\vert{} c.species)}</b>${c.length_cm ? `(${c.length_cm} cm)` : ''}<br><span class="mut">Köder: ${esc(c.lure \vert{}\vert{} 'Keiner angegeben')} •${fmt(c.created_at)}</span></div>
+       <button class="ghost" onclick="deleteCatch('${c.id}')" style="padding:4px 8px; font-size:0.75rem; border-color:#ff4d4f; color:#ff4d4f;">Löschen</button>
+     </div>`).join('') : '<p class="mut">Bisher keine eigenen Fänge eingetragen oder nicht angemeldet.</p>'}
+   </div>
+
+   <h3>🏆 Deine persönlichen Rekorde (aus eigenen Fängen)</h3>
+   <div class="sp" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; text-align:center;">
+     <div><span class="mut" style="font-size:0.75rem">GRÖSSTER FISCH</span><br><b style="font-size:1.1rem">${esc(maxLenText)}</b></div>
+     <div><span class="mut" style="font-size:0.75rem">SCHWERSTER FISCH</span><br><b style="font-size:1.1rem">${esc(maxWeightText)}</b></div>
+   </div>
+
+   <h3>⭐ Deine Favoriten</h3>
+   <p class="mut" style="margin-bottom:6px">Lieblings-Gewässer:</p>
+   <div class="list" id="favLakes"></div>
+   <p class="mut" style="margin:10px 0 6px">Lieblings-Fischarten:</p>
    <div class="tiles" id="favFish"></div>`;
+
   bindAuth(); bindTabs();
 
-  // Favoriten Gewässer & Fische rendern
   const favLakeList = LAKES.filter(l=>favs.lakes.includes(l.id));
   document.getElementById("favLakes").innerHTML = favLakeList.length ? favLakeList.map(l=>`<button data-id="${esc(l.id)}">⭐ ${esc(l.name)} <span class="mut">${TYPES[l.type]||""}</span></button>`).join("") : `<p class="mut">Noch keine Gewässer favorisiert.</p>`;
   document.querySelectorAll("#favLakes [data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id));
@@ -589,42 +725,6 @@ async function myselfHome(){
   document.querySelectorAll("#favFish [data-sp]").forEach(b=>b.onclick=()=>{
     mode="fish"; fishSel=b.dataset.sp; home();
   });
-
-  // Letzte Fänge & persönliche Rekorde laden (falls User angemeldet)
-  if(user && sb) {
-    try {
-      const {data: catchesData} = await sb.from("catches").select("species,lure,length_cm,created_at,lake").eq("user_id", user.id).order("created_at", {ascending: false}).limit(20);
-      if(catchesData && catchesData.length > 0) {
-        // Letzte Fänge
-        document.getElementById("myRecentCatches").innerHTML = catchesData.slice(0,5).map(c => {
-          const lObj = LAKES.find(l=>l.id===c.lake);
-          return `<div class="sp"><b>${esc(SPECIES[c.species]||c.species)}</b> ${c.length_cm?`(${c.length_cm} cm)`:""} — <span class="mut">${lObj?esc(lObj.name):"Gewässer"}</span><br><span class="mut">Köder: ${esc(c.lure||"Keine Angabe")} | Datum: ${fmt(c.created_at)}</span></div>`;
-        }).join("");
-
-        // Rekorde filtern (max Länge pro Fischart)
-        const recs = {};
-        catchesData.forEach(c => {
-          if(c.length_cm && (!recs[c.species] || c.length_cm > recs[c.species].length_cm)) {
-            recs[c.species] = c;
-          }
-        });
-        const recEntries = Object.values(recs);
-        document.getElementById("myPersonalRecords").innerHTML = recEntries.length ? recEntries.map(c => {
-          const lObj = LAKES.find(l=>l.id===c.lake);
-          return `<div class="sp" style="border-left: 4px solid var(--acc);">🏆 <b>${esc(SPECIES[c.species]||c.species)}: ${c.length_cm} cm</b><br><span class="mut">Gewässer: ${lObj?esc(lObj.name):"Unbekannt"} | ${fmt(c.created_at)}</span></div>`;
-        }).join("") : `<p class="mut">Noch keine Längenangaben bei deinen Fängen hinterlegt.</p>`;
-      } else {
-        document.getElementById("myRecentCatches").innerHTML = `<p class="mut">Noch keine Fänge eingetragen.</p>`;
-        document.getElementById("myPersonalRecords").innerHTML = `<p class="mut">Noch keine Rekorde vorhanden.</p>`;
-      }
-    } catch(e) {
-      document.getElementById("myRecentCatches").innerHTML = `<p class="err">Fehler beim Laden der Fänge.</p>`;
-      document.getElementById("myPersonalRecords").innerHTML = `<p class="err">Fehler beim Laden der Rekorde.</p>`;
-    }
-  } else {
-    document.getElementById("myRecentCatches").innerHTML = `<p class="mut">Bitte melde dich an, um deine Fänge zu sehen.</p>`;
-    document.getElementById("myPersonalRecords").innerHTML = `<p class="mut">Bitte melde dich an, um deine Rekorde zu sehen.</p>`;
-  }
 }
 
 async function select(id){
@@ -635,19 +735,20 @@ async function select(id){
 
   if(window.map){map.panTo({lat:lake.lat,lng:lake.lng});map.setZoom(11)}
   const [c,r] = await Promise.all([
-    sb.from("catches").select("species,lure,created_at").eq("lake",id).limit(5000),
-    sb.from("reports").select("species,type").eq("lake",id).limit(5000)]);
+    sb ? sb.from("catches").select("id,species,lure,length_cm,created_at,user_id").eq("lake",id).limit(5000) : {data:[]},
+    sb ? sb.from("reports").select("species,type").eq("lake",id).limit(5000) : {data:[]}
+  ]);
   if(currentLake!==id) return;
-  const loadErr = (c.error||r.error||{}).message, catches=c.data||[], reports=r.data||[];
+  const catches=c.data||[], reports=r.data||[];
   const agg = aggregate(lake,catches,reports);
   const rows = Object.entries(agg).sort((a,b)=>b[1].count-a[1].count||SPECIES[a[0]].localeCompare(SPECIES[b[0]]));
   const opts = speciesOpts.map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join("");
   const isFav = favs.lakes.includes(id);
 
-  const lakeDetail = LAKE_DETAILS[id] || LAKE_DETAILS[id.toLowerCase().replace(/see$/, '')] || LAKE_DETAILS.default;
+  const lakeDetail = LAKE_DETAILS[id] || LAKE_DETAILS.default;
 
-  panel.innerHTML = `${authBar()}${brandHeader}${weatherWidgetHtml()}<button class="ghost" id="back">Zurück zur Übersicht</button>
-   <h2 style="margin-top:14px">${esc(lake.name)}</h2>
+  panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}<button class="ghost" id="back" style="margin-bottom:14px">Zurück zur Übersicht</button>
+   <h2>${esc(lake.name)}</h2>
    <p class="mut">${TYPES[lake.type]||""}${lake.state?`, ${esc(STATES[lake.state]||"")}`:""}, ${catches.length} gemeldete Fänge, ${rows.length} Fischarten</p>
    
    <button class="ghost" onclick="toggleFavLake('${id}')" style="width:100%;margin:10px 0">${isFav?"⭐ Aus Favoriten entfernen":"☆ Zu Favoriten hinzufügen"}</button>
@@ -669,27 +770,35 @@ async function select(id){
      </ul>
    </details>
 
-   <!-- Rekord-Sektion für das Gewässer -->
-   <details class="info" style="border-left-color: var(--warn);">
-     <summary>
-       <span style="font-size:1.4rem">🏆</span>
-       <div>
-         <b>Rekorde & Kapitale Fänge</b>
-         <div class="mut">Bekannte Ausnahmefische aus diesem Gewässer</div>
-       </div>
-     </summary>
-     <ul style="margin:10px 0 5px 20px; padding:0; display:grid; gap:6px;">
-       ${lakeDetail.records.map(rec => `<li>${rec}</li>`).join("")}
-     </ul>
-   </details>
+   ${lakeDetail.records && lakeDetail.records.length > 0 ? `
+     <h3>🏆 Bekannte Rekordfische am Gewässer (Beispiele)</h3>
+     <div style="display:grid; gap:6px; margin-bottom:14px;">
+       ${lakeDetail.records.map(rec => `
+         <div class="sp" style="display:flex; align-items:center; gap:12px; padding:8px 12px;">
+           ${fishImg(rec.sp, 40)}
+           <div style="flex:1;">
+             <b>${esc(SPECIES[rec.sp])}</b>: <span style="color:var(--acc); font-weight:600;">${esc(rec.weight)}</span>
+             <div class="mut" style="font-size:0.8rem">${esc(rec.info)}</div>
+           </div>
+         </div>
+       `).join("")}
+     </div>
+   ` : ''}
 
-   ${loadErr?`<p class="err">Daten konnten nicht geladen werden: ${esc(loadErr)}</p>`:""}
+   <h3>⭐ Highlight-Fische & Hotspots</h3>
+   ${lakeDetail.highlights.map(item => lakeInfoCard(item.sp, lake, item.hotspot, agg[item.sp])).join("")}
+
    ${SPECIAL[lake.id]?`<div class="note">${esc(SPECIAL[lake.id])}</div>`:""}
    
-   <h3>Fischarten (Schonzeiten & Details)</h3>
-   ${rows.map(([sp,a])=>`
-     ${lakeInfoCard(sp, lake)}
-   `).join("")}
+   <h3>Alle Fischarten im Gewässer</h3>
+   ${rows.map(([sp,a])=> lakeInfoCard(sp, lake, null, a)).join("")}
+
+   <h3>Gemeldete Fänge an diesem Gewässer</h3>
+   <div class="list" style="margin-bottom:14px;">
+     ${catches.length ? catches.map(c => `<div class="sp" style="display:flex; justify-content:space-between; align-items:center;">
+       <div><b>${esc(SPECIES[c.species] \vert{}\vert{} c.species)}</b>${c.length_cm ? `(${c.length_cm} cm)` : ''}<br><span class="mut">Köder: ${esc(c.lure || 'Keiner')} • ${fmt(c.created_at)}</span></div>${user && c.user_id === user.id ? `<button class="ghost" onclick="deleteCatch('${c.id}')" style="padding:4px 8px; font-size:0.75rem; border-color:#ff4d4f; color:#ff4d4f;">Löschen</button>` : ''}
+     </div>`).join('') : '<p class="mut">Noch keine Fänge gemeldet.</p>'}
+   </div>
 
    ${user?`<h3>Fang eintragen</h3>
    <form id="catchForm"><select name="species" aria-label="Fischart">${opts}</select>
@@ -701,6 +810,7 @@ async function select(id){
      <select name="type" aria-label="Art der Meldung"><option value="besatz">Hier wurde Besatz eingebracht</option><option value="weg">Art kommt hier nicht mehr vor</option></select>
      <button class="ghost">Meldung senden</button><p class="err" id="repErr"></p></form>`
    :`<div class="note">Melde dich an, um Fänge einzutragen oder Meldungen abzugeben.</div>`}`;
+
   document.getElementById("back").onclick = ()=>{if(window.map){map.setCenter({lat:48.1371,lng:11.5754});map.setZoom(7)}home()};
   bindAuth();
   const cf = document.getElementById("catchForm");
@@ -717,29 +827,34 @@ async function select(id){
   };
 }
 
-function fishHome(){
-  panel.innerHTML = `${authBar()}${brandHeader}${weatherWidgetHtml()}${tabs()}
+async function fishHome(){
+  panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}${tabs()}
    <p class="mut">Worauf hast du heute Lust? Tippe auf eine Fischart.</p>
    <label class="mut" for="stSel">Dein Bundesland</label>
    <select id="stSel" style="width:100%;margin:4px 0 8px">${Object.entries(STATES).map(([k,v])=>`<option value="${k}"${k===myState?" selected":""}>${v}${REG.some(r=>r.state===k)?"":" (noch keine Daten)"}</option>`).join("")}</select>
    <div class="legend"><span><i class="dot red"></i> Schonzeit</span><span><i class="dot yellow"></i> Schonmaß</span><span><i class="dot green"></i> erlaubt</span><span><i class="dot"></i> keine Daten</span></div>
    <div class="tiles">${speciesOpts.map(([k,v])=>`<button class="tile${k===fishSel?" on":""}" data-sp="${k}">${fishImg(k,48)}<span>${esc(v)}</span>${dotHtml(regStatus(regFor(myState,k,null),myState))}</button>`).join("")}</div>
    <div id="fishRes"></div>`;
+  
   bindAuth(); bindTabs();
   document.getElementById("stSel").onchange=e=>{myState=e.target.value;try{localStorage.setItem("myState",myState)}catch(_){}fishHome()};
-  panel.querySelectorAll(".tile").forEach(b=>b.onclick=()=>{
-    fishSel=fishSel===b.dataset.sp?null:b.dataset.sp; fishHome();
-    if(fishSel) setTimeout(()=>document.getElementById("fishRes").scrollIntoView({behavior:"smooth",block:"start"}),50);
+  
+  panel.querySelectorAll(".tile").forEach(b=>b.onclick=async()=>{
+    fishSel=fishSel===b.dataset.sp?null:b.dataset.sp; 
+    await fishHome();
+    if(fishSel) document.getElementById("fishRes")?.scrollIntoView({behavior:"smooth",block:"start"});
   });
   showFish();
 }
+
 async function showFish(){
   const box=document.getElementById("fishRes"); if(!box) return;
   if(!fishSel){resetMarkers();return}
   const sp=fishSel; box.innerHTML=infoCard(sp,myState)+'<p class="mut" style="margin-top:12px">Lade…</p>';
   const [c,r]=await Promise.all([
-    sb.from("catches").select("lake,lure,created_at").eq("species",sp).limit(5000),
-    sb.from("reports").select("lake,type").eq("species",sp).limit(5000)]);
+    sb ? sb.from("catches").select("lake,lure,created_at").eq("species",sp).limit(5000) : {data:[]},
+    sb ? sb.from("reports").select("lake,type").eq("species",sp).limit(5000) : {data:[]}
+  ]);
   if(fishSel!==sp||document.getElementById("fishRes")!==box) return;
   const by={}, rep={};
   (c.data||[]).forEach(x=>(by[x.lake]=by[x.lake]||[]).push(x));
@@ -762,10 +877,10 @@ async function showFish(){
   box.querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id));
 }
 
-function showAdd(){
+async function showAdd(){
   currentLake = null; picking = true; picked = null;
-  panel.innerHTML = `${authBar()}${weatherWidgetHtml()}<button class="ghost" id="cancel">Abbrechen</button>
-   <h2 style="margin-top:14px">Neues Gewässer</h2>
+  panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}<button class="ghost" id="cancel" style="margin-bottom:14px">Abbrechen</button>
+   <h2>Neues Gewässer</h2>
    <p class="mut">Klicke auf die Karte, um die Position zu setzen, oder nutze deinen Standort.</p>
    <form id="addForm">
      <input name="name" placeholder="Name, z. B. Kirchsee" required minlength="2" maxlength="80">
@@ -829,16 +944,21 @@ if(GMAPS_KEY){
   s.async=true; document.head.appendChild(s);
 } else document.getElementById("map").innerHTML='<p class="mut" style="padding:24px">Karte erscheint, sobald ein Google-Maps-Key eingetragen ist.</p>';
 
+let lastUid = null;
 if(sb){
   sb.auth.onAuthStateChange(async (_e,session)=>{
-    user=session?session.user:null; 
+    const uid = session?.user?.id || null;
+    if(uid === lastUid) return;
+    lastUid = uid;
+    user = session ? session.user : null; 
     if(user) await loadCloudFavs();
     if(!picking) render();
   });
   sb.auth.getSession().then(async({data})=>{
-    user=data.session?data.session.user:null; 
+    user = data.session ? data.session.user : null;
+    lastUid = user ? user.id : null;
     if(user) await loadCloudFavs();
-    await loadLakes(); 
+    await loadLakes();
     await initDefaultWeather();
     render();
   });
