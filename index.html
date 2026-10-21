@@ -609,7 +609,6 @@ async function home(filter=""){
   if(mode==="fish"){fishHome();return}
   if(mode==="myself"){myselfHome();return}
 
-  // Gruppiere Gewässer nach Bundesland
   const grouped = {};
   LAKES.forEach(l => {
     const st = l.state || "BY";
@@ -632,7 +631,7 @@ async function home(filter=""){
    <div id="lakesContainer" style="margin-top:12px;">
      ${Object.entries(STATES).map(([stKey, stName]) => {
        const stateLakes = (grouped[stKey] || []).filter(l => !qFilter || l.name.toLowerCase().includes(qFilter));
-       if(stateLakes.length === 0 && qFilter) return ''; // Verstecke leere Bundesländer bei aktiver Suche
+       if(stateLakes.length === 0 && qFilter) return '';
        const isOpen = qFilter.length > 0 || stKey === myState;
        return `<details class="info" ${isOpen ? 'open' : ''} style="margin-bottom:8px;">
          <summary style="font-weight:600;">
@@ -648,17 +647,10 @@ async function home(filter=""){
 
    ${user?`<button class="ghost" id="addLake" style="width:100%;margin-top:12px">Neues Gewässer hinzufügen</button>`:`<p class="mut" style="margin-top:12px">Melde dich an, um neue Gewässer hinzuzufügen.</p>`}`;
   
-  const drawSearch = ()=>{
-    const q = document.getElementById("q").value.toLowerCase();
-    home(q);
-  };
-  
-  // Event listener fürs Suchfeld neu binden da HTML neu gerendert wird
   const qInput = document.getElementById("q");
   if(qInput) {
     qInput.oninput = (e)=>{
       const val = e.target.value;
-      // Cursor position sichern bei schnellem Tippen
       const cPos = e.target.selectionStart;
       home(val);
       const newQ = document.getElementById("q");
