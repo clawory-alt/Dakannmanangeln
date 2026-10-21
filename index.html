@@ -66,7 +66,7 @@ button.g{background:#fff;color:#1f1f1f;display:flex;align-items:center;justify-c
 <body>
 <div id="map" role="application" aria-label="Karte der Gewässer"></div>
 <aside>
-  <div id="panel" aria-live="polite">Lade Anwendung...</div>
+  <div id="panel" aria-live="polite"></div>
   <footer class="foot">powered by <b>MCL</b></footer>
 </aside>
 
@@ -76,11 +76,7 @@ const GMAPS_KEY = "AIzaSyDOtFUnfisnyQ4aGCqYkLBn-2Qho8wYjRg";
 const SUPABASE_URL = "https://tcxculodyydiratmceqe.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_eV71cPJvqzEskXDvOFmVSQ_4iFWYUqP";
 
-let sb = null;
-if (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
-  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-}
-
+const sb = (SUPABASE_URL && SUPABASE_ANON_KEY) ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 let user = null, LAKES = [], currentLake = null, picking = false, picked = null, tmpMarker = null;
 const markers = {};
 let mode = "lake", fishSel = null;
@@ -146,7 +142,7 @@ async function fetchWeather(lat, lng) {
   }
 }
 
-const esc = s=>String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const esc = s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt = iso=>new Date(iso).toLocaleDateString("de-DE");
 const freq = n=>n>=10?"sehr häufig":n>=4?"häufig":"selten";
 
@@ -608,128 +604,120 @@ async function deleteCatch(catchId) {
 }
 
 async function home(filter=""){
-  try {
-    currentLake = null; picking = false; resetMarkers();
+  currentLake = null; picking = false; resetMarkers();
 
-    if(mode==="fish"){fishHome();return}
-    if(mode==="myself"){myselfHome();return}
+  if(mode==="fish"){fishHome();return}
+  if(mode==="myself"){myselfHome();return}
 
-    const grouped = {};
-    LAKES.forEach(l => {
-      const st = l.state || "BY";
-      if(!grouped[st]) grouped[st] = [];
-      grouped[st].push(l);
-    });
+  // Gruppierung nach Bundesland mit aufklappbaren Dropdown-Feldern
+  const grouped = {};
+  LAKES.forEach(l => {
+    const st = l.state || "BY";
+    if(!grouped[st]) grouped[st] = [];
+    grouped[st].push(l);
+  });
 
-    const qFilter = (filter||"").toLowerCase();
+  const qFilter = filter.toLowerCase();
 
-    panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}${tabs()}
-     
-     <button onclick="findNearestLakeByGPS()" style="width:100%;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;">
-       📍 Am Gewässer? GPS-Standort erkennen (bis 25 km)
-     </button>
+  panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}${tabs()}
+   
+   <button onclick="findNearestLakeByGPS()" style="width:100%;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;">
+     📍 Am Gewässer? GPS-Standort erkennen (bis 25 km)
+   </button>
 
-     <p class="mut">${LAKES.length} Gewässer nach Bundesland sortiert oder suche hier.</p>
-     ${GMAPS_KEY?"":`<div class="note">Noch kein Google-Maps-Key eingetragen (<code>GMAPS_KEY</code>).</div>`}
-     <form onsubmit="return false"><input id="q" type="search" placeholder="Gewässer suchen" value="${esc(filter)}" autocomplete="off"></form>
-     
-     <div id="lakesContainer" style="margin-top:12px;">
-       ${Object.entries(STATES).map(([stKey, stName]) => {
-         const stateLakes = (grouped[stKey] || []).filter(l => !qFilter || l.name.toLowerCase().includes(qFilter));
-         if(stateLakes.length === 0 && qFilter) return '';
-         const isOpen = qFilter.length > 0 || stKey === myState;
-         return `<details class="info" ${isOpen ? 'open' : ''} style="margin-bottom:8px;">
-           <summary style="font-weight:600;">
-             <span>📍 ${esc(stName)}</span>
-             <span class="mut" style="font-size:0.8rem; margin-left:auto;">(${stateLakes.length} Gewässer)</span>
-           </summary>
-           <div class="list" style="margin-top:8px;">
-             ${stateLakes.length ? stateLakes.map(l => `<button data-id="${esc(l.id)}">${esc(l.name)} <span class="mut">${TYPES[l.type]||""}</span></button>`).join('') : '<p class="mut" style="padding:4px 0;">Keine Gewässer in diesem Bundesland.</p>'}
-           </div>
-         </details>`;
-       }).join('')}
-     </div>
+   <p class="mut">${LAKES.length} Gewässer nach Bundesland sortiert oder suche hier.</p>
+   ${GMAPS_KEY?"":`<div class="note">Noch kein Google-Maps-Key eingetragen (<code>GMAPS_KEY</code>).</div>`}
+   <form onsubmit="return false"><input id="q" type="search" placeholder="Gewässer suchen" value="${esc(filter)}" autocomplete="off"></form>
+   
+   <div id="lakesContainer" style="margin-top:12px;">
+     ${Object.entries(STATES).map(([stKey, stName]) => {
+       const stateLakes = (grouped[stKey] || []).filter(l => !qFilter || l.name.toLowerCase().includes(qFilter));
+       if(stateLakes.length === 0 && qFilter) return '';
+       const isOpen = qFilter.length > 0 || stKey === myState;
+       return `<details class="info" ${isOpen ? 'open' : ''} style="margin-bottom:8px;">
+         <summary style="font-weight:600;">
+           <span>📍 ${esc(stName)}</span>
+           <span class="mut" style="font-size:0.8rem; margin-left:auto;">(${stateLakes.length} Gewässer)</span>
+         </summary>
+         <div class="list" style="margin-top:8px;">
+           ${stateLakes.length ? stateLakes.map(l => `<button data-id="${esc(l.id)}">${esc(l.name)} <span class="mut">${TYPES[l.type]||""}</span></button>`).join('') : '<p class="mut" style="padding:4px 0;">Keine Gewässer in diesem Bundesland.</p>'}
+         </div>
+       </details>`;
+     }).join('')}
+   </div>
 
-     ${user?`<button class="ghost" id="addLake" style="width:100%;margin-top:12px">Neues Gewässer hinzufügen</button>`:`<p class="mut" style="margin-top:12px">Melde dich an, um neue Gewässer hinzuzufügen.</p>`}`;
-    
-    const qInput = document.getElementById("q");
-    if(qInput) {
-      qInput.oninput = (e)=>{
-        const val = e.target.value;
-        const cPos = e.target.selectionStart;
-        home(val);
-        const newQ = document.getElementById("q");
-        if(newQ) {
-          newQ.focus();
-          newQ.setSelectionRange(cPos, cPos);
-        }
-      };
-    }
-
-    document.querySelectorAll("#lakesContainer [data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id));
-    const a = document.getElementById("addLake"); if(a) a.onclick = showAdd;
-    bindAuth(); bindTabs();
-  } catch(err) {
-    console.error("Render-Fehler in home():", err);
-    panel.innerHTML = `<div class="note err"><b>Fehler beim Rendern:</b> ${esc(err.message)}</div>`;
+   ${user?`<button class="ghost" id="addLake" style="width:100%;margin-top:12px">Neues Gewässer hinzufügen</button>`:`<p class="mut" style="margin-top:12px">Melde dich an, um neue Gewässer hinzuzufügen.</p>`}`;
+  
+  const qInput = document.getElementById("q");
+  if(qInput) {
+    qInput.oninput = (e)=>{
+      const val = e.target.value;
+      const cPos = e.target.selectionStart;
+      home(val);
+      const newQ = document.getElementById("q");
+      if(newQ) {
+        newQ.focus();
+        newQ.setSelectionRange(cPos, cPos);
+      }
+    };
   }
+
+  document.querySelectorAll("#lakesContainer [data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id));
+  const a = document.getElementById("addLake"); if(a) a.onclick = showAdd;
+  bindAuth(); bindTabs();
 }
 
 async function myselfHome(){
-  try {
-    let myCatches = [];
-    let maxLenText = "Noch kein Fang";
-    let maxWeightText = "Noch kein Fang";
+  let myCatches = [];
+  let maxLenText = "Noch kein Fang";
+  let maxWeightText = "Noch kein Fang";
 
-    if (user && sb) {
-      const { data } = await sb.from("catches").select("id,species,lure,length_cm,created_at,lake").eq("user_id", user.id).order("created_at", {ascending: false}).limit(20);
-      myCatches = data || [];
-      
-      if (myCatches.length > 0) {
-        const withLen = myCatches.filter(c => c.length_cm);
-        if (withLen.length > 0) {
-          withLen.sort((a,b) => b.length_cm - a.length_cm);
-          maxLenText = `${withLen[0].length_cm} cm (${SPECIES[withLen[0].species] || withLen[0].species})`;
-        }
+  if (user && sb) {
+    const { data } = await sb.from("catches").select("id,species,lure,length_cm,created_at,lake").eq("user_id", user.id).order("created_at", {ascending: false}).limit(20);
+    myCatches = data || [];
+    
+    if (myCatches.length > 0) {
+      const withLen = myCatches.filter(c => c.length_cm);
+      if (withLen.length > 0) {
+        withLen.sort((a,b) => b.length_cm - a.length_cm);
+        maxLenText = `${withLen[0].length_cm} cm (${SPECIES[withLen[0].species] || withLen[0].species})`;
       }
     }
-
-    panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}${tabs()}
-     
-     <h3>🎣 Deine letzten Fänge</h3>
-     <div class="list" id="myCatchesList">
-       ${myCatches.length ? myCatches.map(c => `<div class="sp" style="display:flex; justify-content:space-between; align-items:center;">
-         <div><b>${esc(SPECIES[c.species] \vert{}\vert{} c.species)}</b>${c.length_cm ? `(${c.length_cm} cm)` : ''}<br><span class="mut">Köder: ${esc(c.lure \vert{}\vert{} 'Keiner angegeben')} •${fmt(c.created_at)}</span></div>
-         <button class="ghost" onclick="deleteCatch('${c.id}')" style="padding:4px 8px; font-size:0.75rem; border-color:#ff4d4f; color:#ff4d4f;">Löschen</button>
-       </div>`).join('') : '<p class="mut">Bisher keine eigenen Fänge eingetragen oder nicht angemeldet.</p>'}
-     </div>
-
-     <h3>🏆 Deine persönlichen Rekorde (aus eigenen Fängen)</h3>
-     <div class="sp" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; text-align:center;">
-       <div><span class="mut" style="font-size:0.75rem">GRÖSSTER FISCH</span><br><b style="font-size:1.1rem">${esc(maxLenText)}</b></div>
-       <div><span class="mut" style="font-size:0.75rem">SCHWERSTER FISCH</span><br><b style="font-size:1.1rem">${esc(maxWeightText)}</b></div>
-     </div>
-
-     <h3>⭐ Deine Favoriten</h3>
-     <p class="mut" style="margin-bottom:6px">Lieblings-Gewässer:</p>
-     <div class="list" id="favLakes"></div>
-     <p class="mut" style="margin:10px 0 6px">Lieblings-Fischarten:</p>
-     <div class="tiles" id="favFish"></div>`;
-
-    bindAuth(); bindTabs();
-
-    const favLakeList = LAKES.filter(l=>favs.lakes.includes(l.id));
-    document.getElementById("favLakes").innerHTML = favLakeList.length ? favLakeList.map(l=>`<button data-id="${esc(l.id)}">⭐ ${esc(l.name)} <span class="mut">${TYPES[l.type]||""}</span></button>`).join("") : `<p class="mut">Noch keine Gewässer favorisiert.</p>`;
-    document.querySelectorAll("#favLakes [data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id));
-
-    const favFishTiles = favs.fish.map(sp=>`<button class="tile" data-sp="${sp}">${fishImg(sp,48)}<span>${esc(SPECIES[sp])}</span>${dotHtml(regStatus(regFor(myState,sp,null),myState))}</button>`).join("");
-    document.getElementById("favFish").innerHTML = favs.fish.length ? favFishTiles : `<p class="mut" style="grid-column: span 3">Noch keine Fischarten favorisiert.</p>`;
-    document.querySelectorAll("#favFish [data-sp]").forEach(b=>b.onclick=()=>{
-      mode="fish"; fishSel=b.dataset.sp; home();
-    });
-  } catch(err) {
-    console.error("Render-Fehler in myselfHome():", err);
   }
+
+  panel.innerHTML = `${brandHeader}${authBar()}${weatherWidgetHtml()}${tabs()}
+   
+   <h3>🎣 Deine letzten Fänge</h3>
+   <div class="list" id="myCatchesList">
+     ${myCatches.length ? myCatches.map(c => `<div class="sp" style="display:flex; justify-content:space-between; align-items:center;">
+       <div><b>${esc(SPECIES[c.species] \vert{}\vert{} c.species)}</b>${c.length_cm ? `(${c.length_cm} cm)` : ''}<br><span class="mut">Köder: ${esc(c.lure \vert{}\vert{} 'Keiner angegeben')} •${fmt(c.created_at)}</span></div>
+       <button class="ghost" onclick="deleteCatch('${c.id}')" style="padding:4px 8px; font-size:0.75rem; border-color:#ff4d4f; color:#ff4d4f;">Löschen</button>
+     </div>`).join('') : '<p class="mut">Bisher keine eigenen Fänge eingetragen oder nicht angemeldet.</p>'}
+   </div>
+
+   <h3>🏆 Deine persönlichen Rekorde (aus eigenen Fängen)</h3>
+   <div class="sp" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; text-align:center;">
+     <div><span class="mut" style="font-size:0.75rem">GRÖSSTER FISCH</span><br><b style="font-size:1.1rem">${esc(maxLenText)}</b></div>
+     <div><span class="mut" style="font-size:0.75rem">SCHWERSTER FISCH</span><br><b style="font-size:1.1rem">${esc(maxWeightText)}</b></div>
+   </div>
+
+   <h3>⭐ Deine Favoriten</h3>
+   <p class="mut" style="margin-bottom:6px">Lieblings-Gewässer:</p>
+   <div class="list" id="favLakes"></div>
+   <p class="mut" style="margin:10px 0 6px">Lieblings-Fischarten:</p>
+   <div class="tiles" id="favFish"></div>`;
+
+  bindAuth(); bindTabs();
+
+  const favLakeList = LAKES.filter(l=>favs.lakes.includes(l.id));
+  document.getElementById("favLakes").innerHTML = favLakeList.length ? favLakeList.map(l=>`<button data-id="${esc(l.id)}">⭐ ${esc(l.name)} <span class="mut">${TYPES[l.type]||""}</span></button>`).join("") : `<p class="mut">Noch keine Gewässer favorisiert.</p>`;
+  document.querySelectorAll("#favLakes [data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id));
+
+  const favFishTiles = favs.fish.map(sp=>`<button class="tile" data-sp="${sp}">${fishImg(sp,48)}<span>${esc(SPECIES[sp])}</span>${dotHtml(regStatus(regFor(myState,sp,null),myState))}</button>`).join("");
+  document.getElementById("favFish").innerHTML = favs.fish.length ? favFishTiles : `<p class="mut" style="grid-column: span 3">Noch keine Fischarten favorisiert.</p>`;
+  document.querySelectorAll("#favFish [data-sp]").forEach(b=>b.onclick=()=>{
+    mode="fish"; fishSel=b.dataset.sp; home();
+  });
 }
 
 async function select(id){
@@ -950,30 +938,27 @@ if(GMAPS_KEY){
 } else document.getElementById("map").innerHTML='<p class="mut" style="padding:24px">Karte erscheint, sobald ein Google-Maps-Key eingetragen ist.</p>';
 
 let lastUid = null;
-(async function startup() {
-  try {
-    if(sb){
-      sb.auth.onAuthStateChange(async (_e,session)=>{
-        const uid = session?.user?.id || null;
-        if(uid === lastUid) return;
-        lastUid = uid;
-        user = session ? session.user : null; 
-        if(user) await loadCloudFavs();
-        if(!picking) render();
-      });
-      const {data} = await sb.auth.getSession();
-      user = data ? data.session ? data.session.user : null : null;
-      lastUid = user ? user.id : null;
-      if(user) await loadCloudFavs();
-      await loadLakes();
-    }
+if(sb){
+  sb.auth.onAuthStateChange(async (_e,session)=>{
+    const uid = session?.user?.id || null;
+    if(uid === lastUid) return;
+    lastUid = uid;
+    user = session ? session.user : null; 
+    if(user) await loadCloudFavs();
+    if(!picking) render();
+  });
+  sb.auth.getSession().then(async({data})=>{
+    user = data.session ? data.session.user : null;
+    lastUid = user ? user.id : null;
+    if(user) await loadCloudFavs();
+    await loadLakes();
     await initDefaultWeather();
     render();
-  } catch(e) {
-    console.error("Startup Fehler:", e);
-    panel.innerHTML = `<div class="note err"><b>Start-Fehler:</b> ${esc(e.message)}</div>`;
-  }
-})();
+  });
+} else {
+  initDefaultWeather();
+  home();
+}
 </script>
 </body>
 </html>
