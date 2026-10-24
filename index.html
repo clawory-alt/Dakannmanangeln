@@ -307,6 +307,12 @@ const LAKE_DETAILS = {
   ammersee: {
     title: "Ammersee: Tiefenstruktur & Revier-Tipps",
     intro: "Herrschinger Bucht, Steilkanten bei Lochschwab & Amperauslauf.",
+    ticket: {
+      url: "https://www.fischereiverein-ammersee.de",
+      shopName: "Fischereiverein Ammersee / Lokale Ausgabestellen",
+      price: "Tageskarte ca. 18,00 € - 25,00 € | Wochenkarte ca. 60,00 €",
+      species: "Hecht, Zander, Seeforelle, Renke, Flussbarsch, Karpfen, Wels"
+    },
     bullets: [
       "<b>Herrschinger Bucht:</b> Absoluter Top-Hotspot. Fällt von der flachen Wat-Zone steil ab. Sehr gut auf Hecht & Seeforelle an der Kante.",
       "<b>Lochschwab (Nordseite):</b> Kante beginnt beim 'Kreuz im Wasser' – exzellent zum Frühjahrsangeln mit Wathose.",
@@ -322,6 +328,12 @@ const LAKE_DETAILS = {
   chiemsee: {
     title: "Chiemsee: Tiefenstruktur & Revier-Tipps",
     intro: "Das 'Bayerische Meer' – Schalchen-Tiefen, Inselkanten & Flussmündungen.",
+    ticket: {
+      url: "https://www.chiemsee-fischer.de",
+      shopName: "Chiemsee-Fischer & Online-Ausgabestellen",
+      price: "Tageskarte ca. 20,00 € | Wochenkarte ca. 70,00 €",
+      species: "Hecht, Wels, Renke, Seeforelle, Flussbarsch, Zander, Karpfen"
+    },
     bullets: [
       "<b>Das Schalchen (bis 73m Tiefe):</b> Tiefste Stelle des Sees – das Stammrevier der Chiemsee-Renke und großer Seeforellen.",
       "<b>Frauen- & Herreninsel:</b> Abfallende Kanten rund um die Inseln sind prädestiniert für kapitale Hechte & Barschschwärme.",
@@ -336,6 +348,12 @@ const LAKE_DETAILS = {
   starnberg: {
     title: "Starnberger See: Tiefenstruktur & Revier-Tipps",
     intro: "Extrem tiefes Voralpengewässer (bis 127m) mit klarem Wasser.",
+    ticket: {
+      url: "https://www.hejfish.com",
+      shopName: "Bayerische Schlösser- und Seenverwaltung / hejfish",
+      price: "Tageskarte ca. 22,00 € | Wochenkarte ca. 75,00 €",
+      species: "Seeforelle, Seesaibling, Hecht, Renke, Flussbarsch, Whitefish"
+    },
     bullets: [
       "<b>Roseninsel & Leoni:</b> Hartholz-Kanten und steile Abbrüche – bekannt für kapitale Freiwasserhechte.",
       "<b>Südufer bei Seeshaupt:</b> Flachere Krautzonen, hervorragend auf Karpfen, Schleie und Hecht.",
@@ -350,6 +368,12 @@ const LAKE_DETAILS = {
   default: {
     title: "Wasser- & Uferbegebenheit im Detail",
     intro: "Flache Schilfgürtel im Nordende, steinige Packungen und abfallende Kanten im tieferen Bereich.",
+    ticket: {
+      url: "https://www.hejfish.com",
+      shopName: "Lokale Ausgabestelle / hejfish Portal",
+      price: "Tageskarte ca. 15,00 € - 20,00 €",
+      species: "Hecht, Zander, Karpfen, Flussbarsch, Weißfische"
+    },
     bullets: [
       "<b>Uferzonen:</b> Flache Schilf- & Krautbereiche bieten Deckung für Friedfische & Raubfisch-Nachwuchs.",
       "<b>Kantenbereiche:</b> Übergänge von Flach- zu Tiefwasser sind die bevorzugten Lauerbahnen für Räuber."
@@ -850,6 +874,20 @@ async function select(id){
    <div class="note" style="background:#182232; border-left:4px solid var(--warn); margin-top:12px;">
      ⚠️ <b>Achtung:</b> Es gelten wie immer die Maße auf eurer Angelkarte und das rechtliche Schonmaß – dies hier ist keine rechtliche Info! Petri Heil! 🎣
    </div>
+
+   <!-- ANGELKARTE & KAUF-INFOS -->
+   <details class="info" open style="border-left-color: #3ddc84;">
+     <summary>
+       <span style="font-size:1.4rem">🎫</span>
+       <div>
+         <b>Angelkarte & Preise</b>
+         <div class="mut">Bezugsquellen, Kosten & Freigaben</div>
+       </div>
+     </summary>
+     <p style="margin-top:10px;">🌐 <b>Website zum Kaufen:</b> <a href="${lakeDetail.ticket.url}" target="_blank" rel="noopener" style="color:var(--acc); text-decoration:underline;">${esc(lakeDetail.ticket.shopName)}</a></p>
+     <p>💶 <b>Preise:</b> ${esc(lakeDetail.ticket.price)}</p>
+     <p>🐟 <b>Freigegebene Hauptfische:</b> ${esc(lakeDetail.ticket.species)}</p>
+   </details>
 
    <details class="info" style="border-left-color: var(--acc);">
      <summary>
