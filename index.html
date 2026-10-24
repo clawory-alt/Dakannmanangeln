@@ -204,15 +204,104 @@ async function toggleFavFish(sp){
   saveFavs(); myselfHome();
 }
 
-const SPECIES = {hecht:"Hecht",barsch:"Flussbarsch",zander:"Zander",karpfen:"Karpfen",schleie:"Schleie",aal:"Aal",wels:"Wels",
- rotauge:"Rotauge",brachse:"Brachse",rotfeder:"Rotfeder",renke:"Renke (Felchen)",seeforelle:"Seeforelle",saibling:"Seesaibling",
- bachforelle:"Bachforelle",regenbogen:"Regenbogenforelle",aesche:"Äsche",huchen:"Huchen",barbe:"Barbe",doebel:"Döbel",
- rapfen:"Rapfen",graskarpfen:"Graskarpfen",quappe:"Quappe",kaulbarsch:"Kaulbarsch"};
+const SPECIES = {
+  hecht:"Hecht", barsch:"Flussbarsch", zander:"Zander", karpfen:"Karpfen", schleie:"Schleie", aal:"Aal", wels:"Wels",
+  rotauge:"Rotauge", brachse:"Brachse", rotfeder:"Rotfeder", renke:"Renke (Felchen)", seeforelle:"Seeforelle", saibling:"Seesaibling",
+  bachforelle:"Bachforelle", regenbogen:"Regenbogenforelle", aesche:"Äsche", huchen:"Huchen", barbe:"Barbe", doebel:"Döbel (Aitel)",
+  rapfen:"Schied (Rapfen)", graskarpfen:"Graskarpfen", quappe:"Rutte (Quappe, Trüsche)", kaulbarsch:"Kaulbarsch",
+  lachs:"Atlantischer Lachs", maifisch:"Maifisch", meerforelle:"Meerforelle", bachsaibling:"Bachsaibling", nerfling:"Nerfling (Aland)",
+  frauennerfling:"Frauennerfling", nase:"Nase", laube:"Laube / Ukelei", moderlieschen:"Moderlieschen", elritze:"Elritze",
+  gründling:"Gründling", seelaube:"Seelaube", strömer:"Strömer", schneider:"Schneider", hasel:"Hasel", zobel:"Zobel",
+  zope:"Zope", perlfisch:"Perlfisch", russnase:"Zährte (Seerüssling)", stichling:"Stichling", karausche:"Karausche",
+  giebel:"Giebel", bitterling:"Bitterling", schrätzer:"Schrätzer", streber:"Streber", zingel:"Zingel", stoer:"Stör",
+  zwergwels:"Zwergwels", koppe:"Mühlkoppe", schlammpeitzger:"Schlammpeitzger", bachneunauge:"Bachneunauge",
+  flussneunauge:"Flussneunauge", meerneunauge:"Meerneunauge", donau_neunauge:"Donau-Neunauge",
+  steinkrebs:"Steinkrebs", edelkrebs:"Edelkrebs", kamberkrebs:"Kamberkrebs", signalkrebs:"Signalkrebs",
+  schmerle:"Schmerle", marmorierte_grundel:"Marmorierte Grundel", sichling:"Sichling", mairanke:"Mairenke",
+  blaufelchen:"Blaufelchen", ammersee_kaulbarsch:"Ammersee-Kaulbarsch", donau_kaulbarsch:"Donau-Kaulbarsch",
+  kilch:"Kilch", balkan_goldsteinbeisser:"Balkan-Goldsteinbeißer", donau_steinbeisser:"Donau-Steinbeißer",
+  donau_stromgruendling:"Donau-Stromgründling", guester:"Güster", nordseeschnaepel:"Nordseeschnäpel",
+  steinbeisser:"Steinbeißer", steingressling:"Steingressling", sterlet:"Sterlet", ziege:"Ziege"
+};
+
 const TYPES = {see:"See",fluss:"Fluss",teich:"Teich",talsperre:"Talsperre",kanal:"Kanal"};
 const speciesOpts = Object.entries(SPECIES).sort((a,b)=>a[1].localeCompare(b[1]));
 const STATES={BW:"Baden-Württemberg",BY:"Bayern",BE:"Berlin",BB:"Brandenburg",HB:"Bremen",HH:"Hamburg",HE:"Hessen",MV:"Mecklenburg-Vorpommern",NI:"Niedersachsen",NW:"Nordrhein-Westfalen",RP:"Rheinland-Pfalz",SL:"Saarland",SN:"Sachsen",ST:"Sachsen-Anhalt",SH:"Schleswig-Holstein",TH:"Thüringen"};
 const BASINS={D:"Donau",E:"Elbe",R:"Rhein",W:"Weser"};
 const SPECIAL={bodensee:"Am Bodensee gelten abweichende Regeln der Internationalen Bodensee-Fischereiordnung. Bitte vor Ort prüfen."};
+
+const BAYERN_REGULATIONS = [
+  { species:"bachneunauge", all_year:true, basins:["D","E","R","W"] },
+  { species:"donau_neunauge", all_year:true, basins:["D"] },
+  { species:"flussneunauge", all_year:true, basins:["E","R","W"] },
+  { species:"meerneunauge", all_year:true, basins:["E","R","W"] },
+  { species:"ammersee_kaulbarsch", all_year:true, basins:["D"] },
+  { species:"kilch", all_year:true, basins:["D","R"], note:"Gilt für Ammersee-Kilch (D) sowie Bodensee-Kilch (R)." },
+  { species:"lachs", all_year:true, basins:["E","R","W"] },
+  { species:"stoer", all_year:true, basins:["D","E","R","W"] },
+  { species:"balkan_goldsteinbeisser", all_year:true, basins:["D"] },
+  { species:"bitterling", all_year:true, basins:["D","E","R","W"] },
+  { species:"donau_kaulbarsch", all_year:true, basins:["D"] },
+  { species:"donau_steinbeisser", all_year:true, basins:["D"] },
+  { species:"donau_stromgruendling", all_year:true, basins:["D"] },
+  { species:"schlammpeitzger", all_year:true, basins:["D","E","R","W"] },
+  { species:"frauennerfling", all_year:true, basins:["D"] },
+  { species:"karausche", all_year:true, basins:["D","E","R","W"] },
+  { species:"maifisch", all_year:true, basins:["E","R","W"] },
+  { species:"meerforelle", all_year:true, basins:["E","R","W"] },
+  { species:"nordseeschnaepel", all_year:true, basins:["E","R","W"] },
+  { species:"perlfisch", all_year:true, basins:["D"] },
+  { species:"schneider", all_year:true, basins:["D","E","R","W"] },
+  { species:"schrätzer", all_year:true, basins:["D"] },
+  { species:"steinbeisser", all_year:true, basins:["D","E","R","W"] },
+  { species:"steingressling", all_year:true, basins:["D"] },
+  { species:"sterlet", all_year:true, basins:["D"] },
+  { species:"streber", all_year:true, basins:["D"] },
+  { species:"strömer", all_year:true, basins:["D","R"] },
+  { species:"ziege", all_year:true, basins:["D"] },
+  { species:"zingel", all_year:true, basins:["D"] },
+  { species:"zobel", all_year:true, basins:["D"] },
+  { species:"zope", all_year:true, basins:["D"] },
+  { species:"aal", closed_from:"10-01", closed_to:"12-31", min_cm:50, basins:["E","R","W"] },
+  { species:"aesche", closed_from:"01-01", closed_to:"04-30", min_cm:35, basins:["D","E","R","W"] },
+  { species:"bachforelle", closed_from:"10-01", closed_to:"03-15", min_cm:26, basins:["D","E","R","W"] },
+  { species:"barbe", closed_from:"05-01", closed_to:"06-30", min_cm:40, basins:["D","E","R","W"] },
+  { species:"elritze", closed_from:"05-01", closed_to:"06-30", min_cm:null, basins:["D","E","R","W"] },
+  { species:"hasel", closed_from:"03-01", closed_to:"04-30", min_cm:null, basins:["D","E","R","W"] },
+  { species:"hecht", closed_from:"02-15", closed_to:"04-30", min_cm:50, basins:["D","E","R","W"] },
+  { species:"huchen", closed_from:"02-15", closed_to:"06-30", min_cm:90, basins:["D"] },
+  { species:"karpfen", closed_from:null, closed_to:null, min_cm:35, basins:["D","E","R","W"] },
+  { species:"koppe", closed_from:"02-01", closed_to:"04-30", min_cm:null, basins:["D","E","R","W"] },
+  { species:"mairanke", closed_from:"05-01", closed_to:"06-30", min_cm:null, basins:["D"] },
+  { species:"nase", closed_from:"03-01", closed_to:"04-30", min_cm:30, basins:["D","E","R","W"] },
+  { species:"nerfling", closed_from:"03-01", closed_to:"04-30", min_cm:30, basins:["D","E","R","W"] },
+  { species:"regenbogen", closed_from:"12-15", closed_to:"03-15", min_cm:26, basins:["D","E","R","W"] },
+  { species:"renke", closed_from:"10-15", closed_to:"12-31", min_cm:30, basins:["D","E","R","W"] },
+  { species:"quappe", closed_from:null, closed_to:null, min_cm:40, basins:["D","E","R","W"] },
+  { species:"rapfen", closed_from:"03-01", closed_to:"04-30", min_cm:40, basins:["D","R"] },
+  { species:"schleie", closed_from:"05-01", closed_to:"06-30", min_cm:26, basins:["D","E","R","W"] },
+  { species:"seeforelle", closed_from:"10-01", closed_to:"03-15", min_cm:60, basins:["D","R"] },
+  { species:"saibling", closed_from:"10-01", closed_to:"12-31", min_cm:30, basins:["D"] },
+  { species:"zander", closed_from:"02-15", closed_to:"04-30", min_cm:50, basins:["D","E","R","W"] },
+  { species:"doebel", closed_from:null, closed_to:null, min_cm:null, basins:["D","E","R","W"] },
+  { species:"bachsaibling", closed_from:null, closed_to:null, min_cm:null, basins:["D","E","R","W"] },
+  { species:"schmerle", closed_from:null, closed_to:null, min_cm:null, basins:["D","E","R","W"] },
+  { species:"brachse", closed_from:null, closed_to:null, min_cm:null, basins:["D","E","R","W"] },
+  { species:"stichling", closed_from:null, closed_to:null, min_cm:null, basins:["E","R","W"], note:"Dreistachliger Stichling in E/R/W ohne Schonbestimmung. In D (Donau) sowie Neunstachliger Stichling ganzjährig geschont (01.01.-31.12.)." },
+  { species:"barsch", closed_from:null, closed_to:null, min_cm:null, basins:["D","E","R","W"] },
+  { species:"giebel", closed_from:null, closed_to:null, min_cm:null, basins:["D","E","R","W"] },
+  { species:"gründling", closed_from:null, closed_to:null, min_cm:null, basins:["D","E","R","W"] },
+  { species:"guester", closed_from:null, closed_to:null, min_cm:null, basins:["D","E","R","W"] },
+  { species:"kaulbarsch", closed_from:null, closed_to:null, min_cm:null, basins:["D","E","R","W"] },
+  { species:"laube", closed_from:null, closed_to:null, min_cm:null, basins:["D","E","R","W"] },
+  { species:"moderlieschen", closed_from:null, closed_to:null, min_cm:null, basins:["E","R","W"] },
+  { species:"rotauge", closed_from:null, closed_to:null, min_cm:null, basins:["D","E","R","W"] },
+  { species:"rotfeder", closed_from:null, closed_to:null, min_cm:null, basins:["D","E","R","W"] },
+  { species:"wels", closed_from:null, closed_to:null, min_cm:null, basins:["D","E","R","W"] },
+  { species:"russnase", closed_from:null, closed_to:null, min_cm:null, basins:["D","E","R","W"] },
+  { species:"edelkrebs", closed_from:"10-01", closed_to:"07-31", min_cm:12, basins:["D","E","R","W"], note:"Gilt für weibliche Tiere (01.10. bis 31.07. geschont). Männliche Tiere besitzen keine Schonzeit, aber das Mindestmaß von 12 cm." },
+  { species:"steinkrebs", all_year:true, basins:["D","E","R","W"] }
+];
 
 const LAKE_DETAILS = {
   ammersee: {
@@ -294,10 +383,73 @@ const INFO={
  doebel:["Kräftiger Allesfresser, auch Aitel genannt.","Unter überhängenden Büschen, an Brücken und Strömungskanten."],
  rapfen:["Schneller Raubfisch unter den Karpfenartigen (Schied).","In Freiwassern, an Kehrwasserkanten und Wehren großer Flüsse."],
  graskarpfen:["Pflanzenfressender, eingebürgerter Karpfenfisch.","In verkrauteten, warmen Gewässern, oft nahe der Oberfläche."],
- quappe:["Einziger Dorschartiger im Süßwasser, nachtaktiv.","In kühlem Wasser an Steinen und in Tiefenzonen, im Winter besonders aktiv."],
- kaulbarsch:["Kleiner, barschartiger Grundfisch.","Über sandigem und kiesigem Grund in Seen und Flüssen."]};
-const FS={hecht:["#6f9a5a","o","l"],barsch:["#9bb04a","b","m"],zander:["#8a9a78","b","l"],karpfen:["#c9a24a","","d"],schleie:["#6b8f4e","","m"],aal:["#7a7f58","","e"],wels:["#5a6358","w","l"],rotauge:["#c0ccd6","r","m"],brachse:["#b8b08a","","d"],rotfeder:["#d6a642","r","m"],renke:["#c7d3dc","","m"],seeforelle:["#a9b6b0","o","l"],saibling:["#7f8f9a","r","m"],bachforelle:["#a58a4e","o","m"],regenbogen:["#aab6c0","p","m"],aesche:["#8f9aa8","f","l"],huchen:["#a56a52","","l"],barbe:["#9a8a58","w","l"],doebel:["#8e9a8a","","m"],rapfen:["#aeb8c0","","l"],graskarpfen:["#8a9a5a","","l"],quappe:["#7a6a4a","w","l"],kaulbarsch:["#9a8f5a","o","m"]};
+ quappe:["Einziger Dorschartiger im Süßwasser, nachtaktiv (Rutte/Trüsche).","In kühlem Wasser an Steinen und in Tiefenzonen, im Winter besonders aktiv."],
+ kaulbarsch:["Kleiner, barschartiger Grundfisch.","Über sandigem und kiesigem Grund in Seen und Flüssen."],
+ lachs:["König der Salmoniden, ganzjährig geschonter Wanderfisch.","In klaren, schnellfließenden Lachsflüssen."],
+ maifisch:["Heringsartiger Wanderfisch der Flussmündungen und Ströme.","Ganzjährig geschont in frei fließenden Flüssen."],
+ meerforelle:["Anadromer Wanderfisch, silbrig glänzend.","In Küstennähe und Laichflüssen."],
+ bachsaibling:["Bunt gefleckter Salmonide aus Nordamerika.","Kühle, saubere Quellbäche."],
+ nerfling:["Auch Aland genannt, kräftiger Friedfisch.","Langsam fließende Flüsse und Seen."],
+ frauennerfling:["Seltene, geschützte Karpfenart der Donau.","Tiefe Strömungsbereiche der Donau."],
+ nase:["Bodenorientierter Friedfisch mit verhärteter Lippe.","Kiesbänke schnellfließender Flüsse."],
+ laube:["Kleine, oberflächennahe Schwarmfische.","An der Oberfläche ruhiger Gewässer."],
+ moderlieschen:["Sehr kleiner Friedfisch, lebt in Schwärmen.","Verkrautete Flachwasserzonen."],
+ elritze:["Winziger, bunter Friedfisch harmloser Bäche.","Klares, kaltes Wasser."],
+ gründling:["Kleiner Grundfisch mit zwei Barteln.","Sandige und kiesige Grundbereiche."],
+ seelaube:["Freiwasserfisch alpennaher Seen.","Oberflächennah in Voralpenseen."],
+ strömer:["Gefährdete Fischart der Barbenregion.","Schnell strömendes Wasser."],
+ schneider:["Kleine Friedfischart mit dunklem Seitenband.","Kiesige Flussabschnitte."],
+ hasel:["Schlanker, silberner Friedfisch.","Kiesbänke und Strömungszonen."],
+ zobel:["Donau-Friedfisch mit langer Afterflosse.","Tiefere Flussabschnitte."],
+ zope:["Verwandte der Brachse, flacher Körper.","Träge Flüsse und Flussmündungen."],
+ perlfisch:["Großer, seltene Friedfischart.","Tiefe Voralpenseen."],
+ russnase:["Flachrückige Rußnase (Zährte / Seerüssling).","Flussläufe mit Kiesgrund."],
+ stichling:["Winziger Fisch mit Stacheln auf dem Rücken.","Dreistachliger Stichling im E/R/W ohne Schonbestimmung. In D (Donau) und als Neunstachliger Stichling ganzjährig geschont."],
+ karausche:["Urvater des Goldfisches, extrem zäh.","Schlammige, krautreiche Weiher."],
+ giebel:["Stammform des Goldfisches.","Stillgewässer aller Art."],
+ bitterling:["Winziger Fisch, laicht in Muscheln.","Pflanzenreiche Stillgewässer mit Muscheln."],
+ schrätzer:["Spitzköpfiger, gestreifter Barschartiger.","Strömende Abschnitte der Donau."],
+ streber:["Schlanker Grundfisch der Donau.","Schnell fließende Kiesflüsse."],
+ zingel:["Langgestreckter Raubfisch der Donau.","Tiefe Strömungsrinnen."],
+ stoer:["Uralter Knochenfisch mit Panzerplatten.","Tiefwasserbereiche großer Flüsse/Seen."],
+ zwergwels:["Eingewanderter kleiner Wels mit Barteln.","Warme, schlammige Gewässer."],
+ koppe:["Bodenbewohnender Klein-Raubfisch (Mühlkoppe).","Kalte, steinige Bachbetten."],
+ schlammpeitzger:["Darmatmer, wetterfeinfühliger Grundfisch.","Schlammige Krautlöcher."],
+ bachneunauge:["Aalartiges Rundmaul (geschützt).","Kiesige Quellbäche."],
+ flussneunauge:["Wanderndes Rundmaul.","Flussmündungen und Laichbäche."],
+ meerneunauge:["Großes primitives Rundmaul der Ströme.","Wanderfisch großer Flüsse."],
+ donau_neunauge:["Seltenes Rundmaul des Donaugebiets.","Bäche und Flüsse der Donau."],
+ steinkrebs:["Einheimischer, kleiner Flusskrebs.","Kühle Bäche unter Steinen."],
+ edelkrebs:["Heimischer Edelkrebs (Europäischer Krebs).","Saubere Seen und Fließgewässer. Weibchen 01.10.–31.07. geschont, Männchen ganzjährig frei (Schonmaß 12 cm)."],
+ kamberkrebs:["Invasive Krebsart aus Amerika.","Trübe, langsam fließende Gewässer."],
+ signalkrebs:["Invasiver Krebs mit weißem Scherenfleck.","Flüsse und Seen."],
+ schmerle:["Grundfisch mit Barteln.","Flache, steinige Bäche."],
+ marmorierte_grundel:["Invasive Grundelart aus dem Schwarzmeerraum.","Steinpackungen in Flüssen."],
+ sichling:["Messerscharfer Oberflächenfisch.","Freiwasser großer Flüsse."],
+ mairanke:["Kleiner Voralpenfisch (Mairenke).","Klare Alpen- und Voralpenseen."],
+ blaufelchen:["Renkenart des Bodensees.","Freiwasser tiefer Seen."],
+ ammersee_kaulbarsch:["Endemische Kaulbarschart des Ammersees.","Ganzjährig geschont im Donau-Einzugsgebiet."],
+ donau_kaulbarsch:["Seltene Kaulbarschart.","Ganzjährig geschont im Donau-Gebiet."],
+ kilch:["Alpiner Tiefenwasser-Freiwasserfisch.","Ganzjährig geschont (Ammersee-Kilch in D, Bodensee-Kilch in R)."],
+ balkan_goldsteinbeisser:["Bodenfisch der Donau-Zuflüsse.","Ganzjährig geschont im Donau-Gebiet."],
+ donau_steinbeisser:["Bodenorientierte Steinbeißerart.","Ganzjährig geschont in der Donau."],
+ donau_stromgruendling:["Gefährdete Gründlingsart.","Ganzjährig geschont im Donau-Gebiet."],
+ guester:["Flacher, hochrückiger Weissfisch.","Keine Schonbestimmungen in D/E/R/W."],
+ nordseeschnaepel:["Gefährdeter Maränenverwandter.","Ganzjährig geschont in E/R/W."],
+ steinbeisser:["Kleiner kiesliebender Grundfisch.","Ganzjährig geschont."],
+ steingressling:["Grundfisch rascher Strömungen.","Ganzjährig geschont im Donau-Gebiet."],
+ sterlet:["Kleine Störart der Donau.","Ganzjährig geschont."],
+ ziege:["Messerscharfer Friedfisch mit geschwungener Seitenlinie.","Ganzjährig geschont im Donau-Gebiet."]
+};
+
+const FS={
+ hecht:["#6f9a5a","o","l"],barsch:["#9bb04a","b","m"],zander:["#8a9a78","b","l"],karpfen:["#c9a24a","","d"],schleie:["#6b8f4e","","m"],aal:["#7a7f58","","e"],wels:["#5a6358","w","l"],rotauge:["#c0ccd6","r","m"],brachse:["#b8b08a","","d"],rotfeder:["#d6a642","r","m"],renke:["#c7d3dc","","m"],seeforelle:["#a9b6b0","o","l"],saibling:["#7f8f9a","r","m"],bachforelle:["#a58a4e","o","m"],regenbogen:["#aab6c0","p","m"],aesche:["#8f9aa8","f","l"],huchen:["#a56a52","","l"],barbe:["#9a8a58","w","l"],doebel:["#8e9a8a","","m"],rapfen:["#aeb8c0","","l"],graskarpfen:["#8a9a5a","","l"],quappe:["#7a6a4a","w","l"],kaulbarsch:["#9a8f5a","o","m"],lachs:["#a8b8c0","","l"],maifisch:["#b0c4de","","m"],meerforelle:["#9aa8b0","","l"],bachsaibling:["#c57a58","o","m"],nerfling:["#b8a878","","m"],frauennerfling:["#a89868","","m"],nase:["#a0a8b0","","m"],laube:["#d0d8e0","","e"],moderlieschen:["#c8d0d8","","e"],elritze:["#8a9878","o","e"],gründling:["#9a8868","","e"],seelaube:["#c0c8d0","","m"],strömer:["#98a0a8","","e"],schneider:["#b0b8c0","","e"],hasel:["#b8c0c8","","m"],zobel:["#a89878","","m"],zope:["#b0a888","","m"],perlfisch:["#a8b0b8","","l"],russnase:["#98a0a8","","m"],stichling:["#788878","","e"],karausche:["#b89848","","d"],giebel:["#a89858","","d"],bitterling:["#b8a8c8","","e"],schrätzer:["#a89858","b","m"],streber:["#988858","b","e"],zingel:["#887848","b","m"],stoer:["#687078","","l"],zwergwels:["#484850","","m"],koppe:["#786858","","e"],schlammpeitzger:["#685848","","e"],bachneunauge:["#586058","","e"],flussneunauge:["#586068","","e"],meerneunauge:["#586078","","l"],donau_neunauge:["#586058","","e"],steinkrebs:["#584838","","e"],edelkrebs:["#483828","","m"],kamberkrebs:["#684838","","m"],signalkrebs:["#783828","","m"],schmerle:["#887868","","e"],marmorierte_grundel:["#786858","b","e"],sichling:["#c8d0d8","","m"],mairanke:["#b8c0c8","","e"],blaufelchen:["#a8b8c8","","m"],ammersee_kaulbarsch:["#9a8f5a","o","m"],donau_kaulbarsch:["#9a8f5a","o","m"],kilch:["#c7d3dc","","m"],balkan_goldsteinbeisser:["#9a8868","","e"],donau_steinbeisser:["#9a8868","","e"],donau_stromgruendling:["#9a8868","","e"],guester:["#b8b08a","","d"],nordseeschnaepel:["#c7d3dc","","m"],steinbeisser:["#9a8868","","e"],steingressling:["#9a8868","","e"],sterlet:["#687078","","l"],ziege:["#b8a888","","m"]
+};
+
 function fishSvg(id){
+  if(["steinkrebs","edelkrebs","kamberkrebs","signalkrebs"].includes(id)){
+    return `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:24px;background:var(--card);border-radius:6px;">🦞</div>`;
+  }
   const [c,f,sh]=FS[id]||["#8aa0b0","","m"], ry={l:6,m:9,d:12,e:4}[sh], rx={l:25,m:22,d:20,e:27}[sh];
   let x=`<ellipse cx="32" cy="16" rx="${rx}" ry="${ry}" fill="${c}"/><path d="M${32+rx-3} 16 L62 6 L62 26 Z" fill="${c}"/><path d="M26 ${16-ry} Q32 ${16-ry-7} 40 ${16-ry}Z" fill="${c}" opacity=".8"/><circle cx="15" cy="14" r="2" fill="#0b1118"/><circle cx="15.6" cy="13.4" r=".7" fill="#fff"/>`;
   if(f==="b") x+=[22,30,38].map(p=>`<rect x="${p}" y="${16-ry+1}" width="3" height="${2*ry-2}" fill="#0b1118" opacity=".35"/>`).join("");
@@ -307,10 +459,18 @@ function fishSvg(id){
   if(f==="f") x+=`<path d="M24 ${16-ry} Q34 ${16-ry-12} 46 ${16-ry}Z" fill="#6a5a9a" opacity=".8"/>`;
   return `<svg viewBox="0 0 64 32" aria-hidden="true">${x}</svg>`;
 }
-const fishImg=(id,px)=>`<span class="fi" style="width:${px}px;height:${Math.round(px*.66)}px">${fishSvg(id)}<img src="fische/${id}.jpg" alt="" loading="lazy" onerror="this.remove()"></span>`;
+const fishImg=(id,px)=>{
+  if(["steinkrebs","edelkrebs","kamberkrebs","signalkrebs"].includes(id)){
+    return `<span class="fi" style="width:${px}px;height:${Math.round(px*.66)}px">${fishSvg(id)}</span>`;
+  }
+  return `<span class="fi" style="width:${px}px;height:${Math.round(px*.66)}px">${fishSvg(id)}<img src="fische/${id}.jpg" alt="" loading="lazy" onerror="this.remove()"></span>`;
+};
 
 function regFor(state,sp,basin){
-  const all=REG.filter(r=>r.state===state&&r.species===sp);
+  let all=REG.filter(r=>r.state===state&&r.species===sp);
+  if(!all.length && state==="BY"){
+    all=BAYERN_REGULATIONS.filter(r=>r.species===sp).map(r=>({...r,state:"BY"}));
+  }
   if(!all.length) return null;
   if(!basin) return all.find(r=>!r.basins)||all[0];
   const m=all.filter(r=>!r.basins||r.basins.includes(basin));
@@ -755,7 +915,7 @@ function fishHome(){
   panel.innerHTML = `${authBar()}${brandHeader}${weatherWidgetHtml()}${tabs()}
    <p class="mut">Worauf hast du heute Lust? Tippe auf eine Fischart.</p>
    <label class="mut" for="stSel">Dein Bundesland</label>
-   <select id="stSel" style="width:100%;margin:4px 0 8px">${Object.entries(STATES).map(([k,v])=>`<option value="${k}"${k===myState?" selected":""}>${v}${REG.some(r=>r.state===k)?"":" (noch keine Daten)"}</option>`).join("")}</select>
+   <select id="stSel" style="width:100%;margin:4px 0 8px">${Object.entries(STATES).map(([k,v])=>`<option value="${k}"${k===myState?" selected":""}>${v}${REG.some(r=>r.state===k)||(k==="BY"&&BAYERN_REGULATIONS.length)?"":" (noch keine Daten)"}</option>`).join("")}</select>
    <div class="legend"><span><i class="dot red"></i> Schonzeit</span><span><i class="dot yellow"></i> Schonmaß</span><span><i class="dot green"></i> erlaubt</span><span><i class="dot"></i> keine Daten</span></div>
    <div class="tiles">${speciesOpts.map(([k,v])=>`<button class="tile${k===fishSel?" on":""}" data-sp="${k}">${fishImg(k,48)}<span>${esc(v)}</span>${dotHtml(regStatus(regFor(myState,k,null),myState))}</button>`).join("")}</div>
    <div id="fishRes"></div>`;
