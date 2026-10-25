@@ -184,7 +184,7 @@
                     <h2 class="text-xl font-bold text-white flex items-center gap-2">
                         <i class="fa-solid fa-fish text-sky-400"></i> Alle Fischarten & AVBayFiG Schonzeiten
                     </h2>
-                    <p class="text-xs text-slate-400">Gesetzliche Schonzeiten, Mindestmaße und anatomische Illustrationen nach bayerischem Recht[cite: 6].</p>
+                    <p class="text-xs text-slate-400">Gesetzliche Schonzeiten, Mindestmaße und Biologie nach bayerischem Recht.</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <button onclick="setFishFilter('all')" id="filter-btn-all" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-sky-600 text-white transition">Alle</button>
@@ -334,6 +334,7 @@
         const STATES = { BW: "Baden-Württemberg", BY: "Bayern", BE: "Berlin", BB: "Brandenburg", HB: "Bremen", HH: "Hamburg", HE: "Hessen", MV: "Mecklenburg-Vorpommern", NI: "Niedersachsen", NW: "Nordrhein-Westfalen", RP: "Rheinland-Pfalz", SL: "Saarland", SN: "Sachsen", ST: "Sachsen-Anhalt", SH: "Schleswig-Holstein", TH: "Thüringen" };
         const TYPES = { see: "See", fluss: "Fluss", teich: "Teich", talsperre: "Talsperre", kanal: "Kanal" };
 
+        // Vollständiges Wörterbuch aus dem Backup
         const SPECIES = {
             hecht:"Hecht", barsch:"Flussbarsch", zander:"Zander", karpfen:"Karpfen", schleie:"Schleie", aal:"Aal", wels:"Wels",
             rotauge:"Rotauge", brachse:"Brachse", rotfeder:"Rotfeder", renke:"Renke (Felchen)", seeforelle:"Seeforelle", saibling:"Seesaibling",
@@ -342,34 +343,49 @@
             lachs:"Atlantischer Lachs", maifisch:"Maifisch", meerforelle:"Meerforelle", bachsaibling:"Bachsaibling", nerfling:"Nerfling (Aland)",
             frauennerfling:"Frauennerfling", nase:"Nase", laube:"Laube / Ukelei", moderlieschen:"Moderlieschen", elritze:"Elritze",
             gründling:"Gründling", seelaube:"Seelaube", strömer:"Strömer", schneider:"Schneider", hasel:"Hasel", zobel:"Zobel",
-            zope:"Zope", perlfisch:"Perlfisch", russnase:"Zährte (Seerüssling)", stichling:"Stichling", karausche:"Karausche",
+            zope:"Zope", perlfisch:"Perlfisch", zaehrte:"Zährte (Seerüssling)", stichling:"Stichling", karausche:"Karausche",
             giebel:"Giebel", bitterling:"Bitterling", schrätzer:"Schrätzer", streber:"Streber", zingel:"Zingel", stoer:"Stör",
             zwergwels:"Zwergwels", koppe:"Mühlkoppe", schlammpeitzger:"Schlammpeitzger", bachneunauge:"Bachneunauge",
             flussneunauge:"Flussneunauge", meerneunauge:"Meerneunauge", donau_neunauge:"Donau-Neunauge",
-            steinkrebs:"Steinkrebs", edelkrebs:"Edelkrebs", kamberkrebs:"Kamberkrebs", signalkrebs:"Signalkrebs",
-            schmerle:"Schmerle", marmorierte_grundel:"Marmorierte Grundel", sichling:"Sichling", mairanke:"Mairenke",
-            blaufelchen:"Blaufelchen", ammersee_kaulbarsch:"Ammersee-Kaulbarsch", donau_kaulbarsch:"Donau-Kaulbarsch",
-            kilch:"Kilch", balkan_goldsteinbeisser:"Balkan-Goldsteinbeißer", donau_steinbeisser:"Donau-Steinbeißer",
-            donau_stromgruendling:"Donau-Stromgründling", guester:"Güster", nordseeschnaepel:"Nordseeschnäpel",
-            steinbeisser:"Steinbeißer", steingressling:"Steingressling", sterlet:"Sterlet", ziege:"Ziege"
+            steinkrebs:"Steinkrebs", edelkrebs_maennlich:"Edelkrebs (männlich)", edelkrebs_weiblich:"Edelkrebs (weiblich)", 
+            edelkrebs:"Edelkrebs", kamberkrebs:"Kamberkrebs", signalkrebs:"Signalkrebs", schmerle:"Schmerle", 
+            marmorierte_grundel:"Marmorierte Grundel", sichling:"Sichling", mairanke:"Mairenke", blaufelchen:"Blaufelchen", 
+            ammersee_kaulbarsch:"Ammersee-Kaulbarsch", donau_kaulbarsch:"Donau-Kaulbarsch", kilch:"Kilch", 
+            balkan_goldsteinbeisser:"Balkan-Goldsteinbeißer", donau_steinbeisser:"Donau-Steinbeißer", 
+            donau_stromgruendling:"Donau-Stromgründling", guester:"Güster", nordseeschnaepel:"Nordseeschnäpel", 
+            steinbeisser:"Steinbeißer", steingressling:"Steingressling", sterlet:"Sterlet", ziege:"Ziege", stroemer:"Strömer", 
+            stichling_dreistachelig:"Dreistacheliger Stichling", stichling_neunstachelig:"Neunstacheliger Stichling",
+            grosse_flussmuschel:"Große Flussmuschel", kleine_flussmuschel:"Kleine Flussmuschel", flussperlmuschel:"Flussperlmuschel",
+            malermuschel:"Malermuschel", abgeplattete_teichmuschel:"Abgeplattete Teichmuschel", gemeine_teichmuschel:"Gemeine Teichmuschel",
+            grosse_teichmuschel:"Große Teichmuschel"
         };
 
-        const BAYERN_REGULATIONS = [
-          { species:"hecht", closed_from:"02-15", closed_to:"04-30", min_cm:50 },
-          { species:"zander", closed_from:"02-15", closed_to:"04-30", min_cm:50 },
-          { species:"bachforelle", closed_from:"10-01", closed_to:"03-15", min_cm:26 },
-          { species:"aesche", closed_from:"01-01", closed_to:"04-30", min_cm:35 },
-          { species:"aal", closed_from:"10-01", closed_to:"12-31", min_cm:50 },
-          { species:"karpfen", closed_from:null, closed_to:null, min_cm:35 },
-          { species:"barsch", closed_from:null, closed_to:null, min_cm:null },
-          { species:"wels", closed_from:null, closed_to:null, min_cm:null },
-          { species:"seeforelle", closed_from:"10-01", closed_to:"03-15", min_cm:60 },
-          { species:"saibling", closed_from:"10-01", closed_to:"12-31", min_cm:30 },
-          { species:"renke", closed_from:"10-15", closed_to:"12-31", min_cm:30 },
-          { species:"barbe", closed_from:"05-01", closed_to:"06-30", min_cm:40 },
-          { species:"schleie", closed_from:"05-01", closed_to:"06-30", min_cm:26 },
-          { species:"huchen", closed_from:"02-15", closed_to:"06-30", min_cm:90 }
-        ];
+        // Ausführliche Biologie & Standplatz-Daten aus dem Backup
+        const INFO = {
+            hecht:["Schneller Raubfisch mit entenschnabelartigem Maul.","In Krautbänken, an Schilfkanten, Totholz und Uferabbrüchen."],
+            barsch:["Gestreifter, gesellig jagender Raubfisch.","An Spundwänden, Stegen, Kanten und Krautfeldern, oft im Schwarm."],
+            zander:["Scheuer, dämmerungsaktiver Raubfisch mit Glasaugen.","An Steinpackungen und Kanten im tieferen, eher trüben Wasser."],
+            karpfen:["Kräftiger Friedfisch, der den Boden nach Nahrung absucht.","In Buchten, an Krautkanten und flachen Zonen warmer, ruhiger Gewässer."],
+            schleie:["Dämmerungsaktiver Friedfisch mit kleinen Schuppen.","Im Kraut und über schlammigem Grund flacher, warmer Gewässer."],
+            aal:["Nachtaktiver, schlangenförmiger Wanderfisch.","In Höhlungen, unter Steinen, in Uferbefestigungen und Schlammzonen."],
+            wels:["Größter heimischer Süßwasserfisch, nachtaktiv.","In tiefen Löchern, unter Unterständen und in Kolken großer Gewässer."],
+            rotauge:["Häufiger Schwarmfisch mit roter Iris.","In fast allen Gewässern, oft in Ufernähe und an Stegen."],
+            brachse:["Hochrückiger Friedfisch (Blei), lebt in Schwärmen.","Über weichem Grund in tieferen Zonen von Seen und trägen Flüssen."],
+            rotfeder:["Goldglänzender Friedfisch mit roten Flossen.","Oberflächennah im Kraut und Schilf ruhiger Gewässer."],
+            renke:["Silbriger Freiwasserfisch aus der Familie der Felchen.","Im Freiwasser tiefer, kühler Seen, je nach Jahreszeit in unterschiedlicher Tiefe."],
+            seeforelle:["Große, silbrige Raubforelle der Alpenseen.","Im tiefen Freiwasser, zur Laichzeit in zufließenden Bächen."],
+            saibling:["Kaltwasserfisch der tiefen Alpenseen.","In großer Tiefe über Kiesgrund, bevorzugt sehr kaltes, klares Wasser."],
+            bachforelle:["Standorttreue Forelle mit roten Punkten.","In kühlen, sauerstoffreichen Bächen hinter Steinen und unter Uferböschungen."],
+            regenbogen:["Eingebürgerte Forelle mit rosa Seitenband.","In Forellenteichen, Seen und Flüssen mit Besatz, meist oberflächennah."],
+            aesche:["Schlanke Salmonidenart mit großer Rückenflosse.","In schnell fließenden, klaren Flüssen über Kiesgrund."],
+            huchen:["Größter Raubfisch unter den Salmoniden, typisch für die Donau.","In tiefen Gumpen und Kolken kräftig strömender Donauzuflüsse."],
+            barbe:["Strömungsliebender Grundfisch mit Barteln.","Über Kiesbänken und in Strömungsrinnen großer Flüsse."],
+            doebel:["Kräftiger Allesfresser, auch Aitel genannt.","Unter überhängenden Büschen, an Brücken und Strömungskanten."],
+            rapfen:["Schneller Raubfisch unter den Karpfenartigen (Schied).","In Freiwassern, an Kehrwasserkanten und Wehren großer Flüsse."],
+            quappe:["Einziger Dorschartiger im Süßwasser, nachtaktiv (Rutte/Trüsche).","In kühlem Wasser an Steinen und in Tiefenzonen."],
+            edelkrebs:["Heimischer Edelkrebs (Europäischer Krebs).","Saubere Seen und Fließgewässer. Weibchen geschont, Männchen frei (Mindestmaß 12 cm)."],
+            steinkrebs:["Einheimischer, kleiner Flusskrebs.","Kühle Bäche unter Steinen."]
+        };
 
         const LAKE_DETAILS = {
           ammersee: {
@@ -395,7 +411,7 @@
           },
           chiemsee: {
             title: "Chiemsee: Tiefenstruktur & Revier-Tipps",
-            intro: "Das 'Bayerische Meer' – Schalchen-Tiefen, Inselkanten & Tiroler Ache.",
+            intro: "Das 'Bayerische Meer' – Schalchen-Tiefen, Inselkanten & Flussmündungen.",
             ticket: {
               url: "https://www.chiemsee-fischer.de",
               shopName: "Chiemsee-Fischer & Online-Ausgabestellen",
@@ -453,6 +469,39 @@
           }
         };
 
+        let BAYERN_REGULATIONS = [];
+
+        async function loadRegulations() {
+            if (!sb) return;
+            try {
+                const { data } = await sb.from("regulations").select("*").eq("state", myState);
+                if (data && data.length > 0) {
+                    BAYERN_REGULATIONS = data;
+                }
+            } catch(e) {
+                console.error("Fehler beim Laden der Schonzeiten aus Supabase:", e);
+            }
+        }
+
+        function regFor(state, sp) {
+            return BAYERN_REGULATIONS.find(r => r.species === sp) || { closed_from: null, closed_to: null, min_cm: null, all_year: false };
+        }
+
+        function regStatus(r) {
+            if(!r) return {level:"grey", headline:"Keine Daten", isClosed: false};
+            if(r.all_year) return {level:"red", headline: "Ganzjährig geschont", isClosed: true};
+            
+            const t = new Date(), n = (t.getMonth()+1)*100+t.getDate();
+            const P = s => s ? +s.slice(0,2)*100+(+s.slice(3)) : null;
+            const f = P(r.closed_from), e = P(r.closed_to), min = r.min_cm;
+            const closed = (f != null && e != null) && (f <= e ? (n >= f && n <= e) : (n >= f || n <= e));
+            
+            if(closed) return {level:"red", headline: "Schonzeit aktiv", isClosed: true};
+            return {level: min ? "yellow" : "green", headline: min ? `Mindestmaß: ${min} cm` : "Freigegeben", isClosed: false};
+        }
+
+        const dotHtml = s => `<span class="inline-block w-2.5 h-2.5 rounded-full ${s.level === 'red' ? 'bg-rose-500' : s.level === 'yellow' ? 'bg-amber-400' : s.level === 'green' ? 'bg-emerald-500' : 'bg-slate-500'} ml-1"></span>`;
+
         async function fetchLiveWeather(lat = 48.1371, lng = 11.5754) {
             try {
                 const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,surface_pressure,wind_speed_10m,wind_direction_10m,precipitation`);
@@ -474,9 +523,9 @@
                     liveWeather.index = Math.min(Math.max(score, 2.0), 10.0).toFixed(1);
 
                     if (liveWeather.temp < 8) {
-                        liveWeather.bait = "Slow Jigs / Dead Bait";
+                        liveWeather.bait = "Slow Jigs / Dead Bait (Naturköder)";
                     } else if (c.wind_speed_10m > 20) {
-                        liveWeather.bait = "Spinnerbait / Crankbait";
+                        liveWeather.bait = "Spinnerbait / Crankbait (Neon)";
                     } else {
                         liveWeather.bait = "Gummifisch (Perlmut, 10-15cm)";
                     }
@@ -498,7 +547,7 @@
         }
 
         function realisticFishSvg(id) {
-            if(["steinkrebs","edelkrebs","kamberkrebs","signalkrebs"].includes(id)) {
+            if(id && (id.includes("krebs") || id.includes("muschel"))) {
                 return '<svg class="w-14 h-8 mx-auto" viewBox="0 0 40 30"><text x="5" y="22" font-size="18">🦞</text></svg>';
             }
             return `
@@ -509,23 +558,6 @@
                 <circle cx="13" cy="13" r="1.5" fill="#fff"/>
             </svg>`;
         }
-
-        function regFor(state, sp) {
-            return BAYERN_REGULATIONS.find(r => r.species === sp) || { closed_from: null, closed_to: null, min_cm: null };
-        }
-
-        function regStatus(r) {
-            if(!r) return {level:"grey", headline:"Keine Daten", isClosed: false};
-            const t = new Date(), n = (t.getMonth()+1)*100+t.getDate();
-            const P = s => s ? +s.slice(0,2)*100+(+s.slice(3)) : null;
-            const f = P(r.closed_from), e = P(r.closed_to), min = r.min_cm;
-            const closed = r.all_year || (f != null && (f <= e ? (n >= f && n <= e) : (n >= f || n <= e)));
-            
-            if(closed) return {level:"red", headline: "Schonzeit aktiv", isClosed: true};
-            return {level: min ? "yellow" : "green", headline: min ? `Mindestmaß: ${min} cm` : "Freigegeben", isClosed: false};
-        }
-
-        const dotHtml = s => `<span class="inline-block w-2.5 h-2.5 rounded-full ${s.level === 'red' ? 'bg-rose-500' : s.level === 'yellow' ? 'bg-amber-400' : s.level === 'green' ? 'bg-emerald-500' : 'bg-slate-500'} ml-1"></span>`;
 
         function setFishFilter(filter) {
             currentFishFilter = filter;
@@ -579,7 +611,7 @@
         async function loadLakes() {
             try {
                 if (sb) {
-                    const {data} = await sb.from("waterbodies").select("id,name,type,lat,lng,base,state,basin").limit(1000);
+                    const { data } = await sb.from("waterbodies").select("id,name,type,lat,lng,base,state,basin").limit(1000);
                     if (data && data.length > 0) LAKES = data;
                 }
             } catch(e) { console.error(e); }
@@ -589,11 +621,15 @@
                     { id: 'ammersee', name: 'Ammersee', type: 'see', lat: 47.980, lng: 11.130, state: 'BY', base: ['hecht', 'zander', 'renke', 'seeforelle', 'barsch'] },
                     { id: 'chiemsee', name: 'Chiemsee', type: 'see', lat: 47.883, lng: 12.450, state: 'BY', base: ['hecht', 'wels', 'renke', 'seeforelle'] },
                     { id: 'starnberg', name: 'Starnberger See', type: 'see', lat: 47.900, lng: 11.300, state: 'BY', base: ['seeforelle', 'saibling', 'hecht', 'renke'] },
-                    { id: 'isar-muc', name: 'Isar (München)', type: 'fluss', lat: 48.137, lng: 11.575, state: 'BY', base: ['huchen', 'bachforelle', 'aesche', 'barbe'] }
+                    { id: 'isar', name: 'Isar bei München', type: 'fluss', lat: 48.100, lng: 11.550, state: 'BY', base: ['huchen', 'bachforelle', 'aesche', 'barbe'] }
                 ];
             }
             renderLakesList();
             syncMarkers();
+        }
+
+        function filterLakes() {
+            renderLakesList();
         }
 
         function renderLakesList() {
@@ -672,13 +708,21 @@
             document.getElementById('det-lake-records').innerHTML = detail.records.map(r => `<li>${r}</li>`).join('');
 
             const speciesContainer = document.getElementById('det-lake-species-list');
-            speciesContainer.innerHTML = currentLake.base.map(sp => {
+            const speciesList = currentLake.base || ['hecht', 'barsch', 'zander', 'karpfen'];
+            speciesContainer.innerHTML = speciesList.map(sp => {
                 const reg = regFor(currentLake.state, sp) || { min_cm: 'Keins' };
                 const s = regStatus(reg);
+                const info = INFO[sp] || ["Keine Beschreibung hinterlegt.", "Flachwasser & Kanten"];
                 return `
-                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
-                        <div><strong class="text-white">${SPECIES[sp] || sp}</strong> ${dotHtml(s)}</div>
-                        <div class="text-right text-slate-400">Mindestmaß: <span class="text-sky-400 font-bold">${reg.min_cm ? reg.min_cm + ' cm' : 'Keins'}</span></div>
+                    <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs space-y-2">
+                        <div class="flex items-center justify-between">
+                            <strong class="text-white text-sm">${SPECIES[sp] || sp}</strong> ${dotHtml(s)}
+                        </div>
+                        <p class="text-slate-400">${info[0]}</p>
+                        <div class="flex justify-between items-center pt-1 border-t border-slate-800/80 text-[11px]">
+                            <span class="text-slate-400">Standplatz: <span class="text-slate-200">${info[1]}</span></span>
+                            <span class="text-slate-400">Mindestmaß: <span class="text-sky-400 font-bold">${reg.min_cm ? reg.min_cm + ' cm' : 'Keins'}</span></span>
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -731,17 +775,18 @@
             }).join('') || '<p class="text-xs text-slate-500 col-span-full text-center py-8">Keine Fischarten in dieser Ansicht gefunden.</p>';
         }
 
-        function handleStateChange(e) {
-            myState = e.target.value;
-            renderFishGrid();
+        function toggleFavLake(id) {
+            const idx = favs.lakes.indexOf(id);
+            if (idx > -1) favs.lakes.splice(idx, 1);
+            else favs.lakes.push(id);
+            localStorage.setItem('myFavs', JSON.stringify(favs));
+            if (currentPage === 'gewaesser') renderAllLakesOverview();
+            if (currentLake && currentLake.id === id) renderLakeDetail(id);
         }
 
         function toggleCurrentLakeFav() {
             if (!currentLake) return;
-            const idx = favs.lakes.indexOf(currentLake.id);
-            if (idx > -1) favs.lakes.splice(idx, 1);
-            else favs.lakes.push(currentLake.id);
-            localStorage.setItem('myFavs', JSON.stringify(favs));
+            toggleFavLake(currentLake.id);
             renderLakeDetail(currentLake.id);
         }
 
@@ -807,8 +852,9 @@
             }, () => alert("Standort konnte nicht ermittelt werden."));
         }
 
-        window.onload = function() {
-            loadLakes();
+        window.onload = async function() {
+            await loadLakes();
+            await loadRegulations();
             fetchLiveWeather(48.1371, 11.5754);
         };
     </script>
