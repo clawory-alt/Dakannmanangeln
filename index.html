@@ -488,9 +488,12 @@
             document.getElementById('bait-recommendation').innerText = liveWeather.bait;
             document.getElementById('weather-source').innerText = liveWeather.source;
         }
-
-        function realisticFishSvg(id) {
-            if(id && (id.includes("krebs") || id.includes("muschel"))) {
+        
+          function realisticFishSvg(id) {
+            if (id && id.includes("muschel")) {
+                return '<svg class="w-14 h-8 mx-auto" viewBox="0 0 40 30"><text x="5" y="22" font-size="18">🦪</text></svg>';
+            }
+            if (id && id.includes("krebs")) {
                 return '<svg class="w-14 h-8 mx-auto" viewBox="0 0 40 30"><text x="5" y="22" font-size="18">🦞</text></svg>';
             }
             return `
